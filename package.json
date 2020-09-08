@@ -1,0 +1,66 @@
+{
+  "name": "slim-ef",
+  "version": "0.0.1",
+  "description": "An implementation of basic entity framework functionnalities in typescript",
+  "main": "lib/index.js",
+  "scripts": {
+    "start:dev": "nodemon",
+    "build": "tsc",
+    "format": "prettier --write \"src/**/*.(ts|js)\"",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bugMaker-237/slim-ef.git"
+  },
+  "keywords": [
+    "ef-core",
+    "linq",
+    "orm",
+    "expression"
+  ],
+  "author": "bugmaker-237",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bugMaker-237/slim-ef/issues"
+  },
+  "homepage": "https://github.com/bugMaker-237/slim-ef#readme",
+  "devDependencies": {
+    "@types/jest": "^26.0.9",
+    "@types/node": "^14.0.27",
+    "jest": "^26.3.0",
+    "mysql": "^2.18.1",
+    "nodemon": "^2.0.4",
+    "prettier": "^2.0.5",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^26.1.4",
+    "ts-node": "^8.10.2",
+    "tslint": "^6.1.3",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.9.7"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.(t|j)sx?$": "ts-jest"
+    },
+    "testRegex": "tests.*\\.test\\.(ts)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  },
+  "dependencies": {
+    "slim-exp": "file:../slim-exp",
+    "typeorm": "^0.2.25"
+  }
+}
