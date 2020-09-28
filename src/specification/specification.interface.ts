@@ -1,4 +1,5 @@
 import { SlimExpressionFunction } from 'slim-exp';
+import { SelectQueryBuilder } from 'typeorm';
 
 export interface CriteriaExpression<
   T,
@@ -41,11 +42,15 @@ export enum QueryType {
   RAW_ALL
 }
 export type FunctionQueryType = 'SUM' | 'COUNT' | 'MIN' | 'MAX' | 'AVG';
-export interface ISQLQuerySpecificationEvaluator<T = any> {
-  executeQuery<R = T>(type: QueryType): Promise<R | R[]>;
+export type QuerySpecificationEvaluatorConstructor<T = any> = new (
+  initialQuery: (alias: string) => SelectQueryBuilder<T>,
+  spec: ISpecification<T>
+) => IQuerySpecificationEvaluator<T>;
+export declare class IQuerySpecificationEvaluator<T = any> {
+  constructor(
+    initialQuery: (alias: string) => SelectQueryBuilder<T>,
+    spec: ISpecification<T>
+  );
+  executeQuery<R = T[]>(type: QueryType): Promise<R>;
   getQuery(): Promise<string> | string;
 }
-
-export type SQLQueryConstructor<S = any> = new (
-  spec: ISpecification<S>
-) => ISQLQuerySpecificationEvaluator;

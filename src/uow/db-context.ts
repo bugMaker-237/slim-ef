@@ -1,18 +1,24 @@
 import {
   Connection,
-  QueryBuilder,
   QueryRunner,
-  Repository,
-  SelectQueryBuilder
+  Repository
 } from 'typeorm';
 import { getEntitySchema, getEntitySet, getEntitySetKeys } from '../repository';
 import { DbSet, UnderlyingType } from '../repository/db-set';
 import { IDbSet } from '../repository/interfaces';
 import { IInternalDbSet } from '../repository/_internal.interface';
-import { SQLQuerySpecificationEvaluator } from '../specification/specification-evaluator';
-import { QueryType } from '../specification/specification.interface';
-import { ISavedTransaction, IDbContext, QueryInitializer } from './interfaces';
-import { ModelBuilder } from './model-builder';
+import {
+  QuerySpecificationEvaluatorConstructor,
+  QueryType
+} from '../specification/specification.interface';
+import {
+  ISavedTransaction,
+  IDbContext,
+  QueryInitializer,
+  IDbContextOptionsBuilder
+} from './interfaces';
+import { DbContextModelBuilder } from './model-builder';
+import { DbContextOptionsBuilder } from './options-builder';
 interface IEntity {
   id?: any;
 }
@@ -23,16 +29,30 @@ export abstract class DbContext implements IDbContext {
   private _dirtyAsDeleted: IEntity[] = [];
   private _deleted: IEntity[] = [];
   private _queryRunner: QueryRunner;
-  private modelBuilder: ModelBuilder<any>;
+  private _modelBuilder: DbContextModelBuilder<any>;
+  private _optionsBuilder: DbContextOptionsBuilder;
 
-  constructor(protected _connection: Connection) {
+  constructor(
+    protected _connection: Connection,
+    protected evaluator: QuerySpecificationEvaluatorConstructor
+  ) {
     this._entitySets = new WeakMap();
+    this._modelBuilder = new DbContextModelBuilder();
+    this._optionsBuilder = new DbContextOptionsBuilder();
+    this._initialise();
+  }
+  private _initialise() {
     this._setUnderlyingEntityType();
-    this.modelBuilder = new ModelBuilder();
+    this.onModelCreation(this._modelBuilder);
+    this.onConfiguring(this._optionsBuilder);
   }
 
   protected abstract onModelCreation<BaseType extends object = any>(
-    builder: ModelBuilder<BaseType>
+    builder: DbContextModelBuilder<BaseType>
+  ): void;
+
+  protected abstract onConfiguring(
+    optionsBuilder: IDbContextOptionsBuilder
   ): void;
 
   public add<T extends IEntity>(...entities: T[]) {
@@ -106,15 +126,19 @@ export abstract class DbContext implements IDbContext {
 
     if (!ignoreFilters) {
       // applying filters
-      const filters = this.modelBuilder.getFilters(queryable[UnderlyingType]);
-      filters.forEach(f => f(queryable));
+      const filters = this._modelBuilder.getFilters(queryable[UnderlyingType]);
+      filters.forEach(f => {
+        f(queryable);
+      });
     }
 
     const initializer = this._getSQLBuilder(queryable);
-    const specEval = new SQLQuerySpecificationEvaluator(
+    const specEval = new this.evaluator(
       initializer,
       queryable.asSpecification()
     );
+    const logger = this._optionsBuilder.createLogger('query');
+    logger?.log('info', specEval.getQuery());
     return await specEval.executeQuery(type);
   }
 
@@ -151,12 +175,7 @@ export abstract class DbContext implements IDbContext {
             value: dbset,
             writable: false
           });
-          Object.defineProperty(dbset, UnderlyingType, {
-            configurable: false,
-            enumerable: false,
-            value: entity,
-            writable: false
-          });
+          dbset[UnderlyingType] = entity;
         }
       }
     }

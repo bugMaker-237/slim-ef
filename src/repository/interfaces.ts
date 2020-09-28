@@ -1,9 +1,5 @@
 import { SlimExpressionFunction } from 'slim-exp';
-import { DeepPartial } from 'typeorm';
-import {
-  FieldsSelector,
-  ISpecification
-} from '../specification/specification.interface';
+import { DeepPartial } from './_internal.interface';
 
 export interface QueryRefiner<T extends object> {
   (obj: IQueryable<T>);
@@ -16,7 +12,7 @@ export type PrimitiveType = string | number | boolean;
 export interface IQueryable<
   T extends object,
   P extends ExpressionResult = any
-> {
+  > {
   first(): Promise<T>;
   first<C extends object>(
     func: SlimExpressionFunction<T, boolean, C>,
@@ -42,7 +38,7 @@ export interface IQueryable<
   skip(count: number): this;
   sum(field: SlimExpressionFunction<T, number>): Promise<number>;
   average(field: SlimExpressionFunction<T, number>): Promise<number>;
-  count(field?: SlimExpressionFunction<T>): Promise<number>;
+  count<C extends object>(func?: SlimExpressionFunction<T, boolean, C>): Promise<number>;
   max<R extends ExpressionResult>(
     field: SlimExpressionFunction<T, R>
   ): Promise<R>;
@@ -64,12 +60,12 @@ export interface IQueryable<
 export interface IDbSet<
   T extends object,
   P extends ExpressionResult = any,
-  Q = DeepPartial<T>
-> extends IQueryable<T, P> {
-  add(...entities: Q[]): Promise<void> | void;
-  attach(...entities: Q[]): Promise<void> | void;
-  remove(...entities: Q[]): Promise<void> | void;
-  detach(...entities: Q[]): Promise<void> | void;
+  DT = DeepPartial<T>
+  > extends IQueryable<T, P> {
+  add(...entities: DT[]): Promise<void> | void;
+  attach(...entities: DT[]): Promise<void> | void;
+  remove(...entities: DT[]): Promise<void> | void;
+  detach(...entities: DT[]): Promise<void> | void;
   find(id: any): Promise<T> | T;
   // join(queryable: this): this; ??
 }

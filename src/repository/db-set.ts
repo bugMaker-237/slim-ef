@@ -5,12 +5,13 @@ import {
   QueryType
 } from '../specification/specification.interface';
 import { ExpressionResult, SlimExpressionFunction } from 'slim-exp';
-import { IDbContext } from '../uow';
+import { IDbContext, IUnitOfWork } from '../uow';
 import { IDbSet } from './interfaces';
 import { DeepPartial } from 'typeorm';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
 import { EmptySetException } from './exception';
+import { timeStamp } from 'console';
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
@@ -21,10 +22,25 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
   private _currentSkip: number;
   private _currentTake: number;
   private _ignoreFilters: boolean;
+  private _underlyingType: new (...args) => T;
 
-  constructor(public context: IDbContext) {
+  constructor(public context: IDbContext | IUnitOfWork) {
     super();
   }
+
+  public get [UnderlyingType]() {
+    if (!this._underlyingType) {
+      this._underlyingType = getEntitySchema(this);
+    }
+    return this._underlyingType;
+  }
+
+  public set [UnderlyingType](value) {
+    if (value) {
+      this._underlyingType = value;
+    }
+  }
+
 
   add(...entities: E[]): Promise<void> | void {
     return this.context.add(...patchM(this[UnderlyingType])(...entities));
@@ -64,7 +80,7 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
   ): Promise<T> {
     this.applyPaging(0, 1);
     this.where(func, context);
-    return (await this.context.execute<T>(this, QueryType.ONE)) as T;
+    return await this.execute<T>(QueryType.ONE);
   }
 
   async first(): Promise<T>;
@@ -134,32 +150,39 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
     return this;
   }
 
-  async count(field: SlimExpressionFunction<T>): Promise<number> {
-    this.applyFunction('COUNT', field);
-    return (await this.execute<{ COUNT: number }>(QueryType.ALL)).COUNT;
+  async count<C extends object>(func?: SlimExpressionFunction<T, boolean, C>): Promise<number> {
+    this.addCriteria(func);
+    this.applyFunction('COUNT', null);
+    return Number.parseFloat(
+      (await this.execute<{ COUNT: string }>(QueryType.RAW_ONE)).COUNT
+    );
   }
 
   async sum(field: SlimExpressionFunction<T, number>): Promise<number> {
     this.applyFunction('SUM', field);
-    return (await this.execute<{ SUM: number }>(QueryType.ALL)).SUM;
+    return Number.parseFloat(
+      (await this.execute<{ SUM: string }>(QueryType.RAW_ONE)).SUM
+    );
   }
 
   async average(field: SlimExpressionFunction<T, number>): Promise<number> {
     this.applyFunction('AVG', field);
-    return (await this.execute<{ AVG: number }>(QueryType.ALL)).AVG;
+    return Number.parseFloat(
+      (await this.execute<{ AVG: string }>(QueryType.RAW_ONE)).AVG
+    );
   }
 
   async max<RT extends ExpressionResult>(
     field: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
     this.applyFunction('MAX', field);
-    return (await this.execute<{ MAX: RT }>(QueryType.ALL)).MAX;
+    return (await this.execute<{ MAX: RT }>(QueryType.RAW_ONE)).MAX;
   }
   async min<RT extends ExpressionResult>(
     field: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
     this.applyFunction('MIN', field);
-    return (await this.execute<{ MIN: RT }>(QueryType.ALL)).MIN;
+    return (await this.execute<{ MIN: RT }>(QueryType.RAW_ONE)).MIN;
   }
 
   orderBy(orderBy: SlimExpressionFunction<T>) {
@@ -199,12 +222,14 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
     return await this.execute(QueryType.ALL);
   }
 
-  private async execute<TResult>(type: QueryType) {
-    return (await this.context.execute(
+  private async execute<TResult>(type: QueryType): Promise<TResult> {
+    const res = (await this.context.execute(
       this,
       type,
       this._ignoreFilters
     )) as TResult;
+    this.clearSpecs();
+    return res;
   }
 
   then<TResult1 = T[], TResult2 = never>(

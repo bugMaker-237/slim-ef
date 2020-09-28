@@ -1,9 +1,7 @@
-import { patch } from '../../src';
 import { FakeDBContext } from '../db-context';
-import { Person } from '../entities/person';
 
 describe('Logical LINQ', () => {
-  it('Should have correct firstname', async () => {
+  it('Should have correct firstname and lastname', async () => {
     // Arrange
     const context = new FakeDBContext();
 
@@ -19,91 +17,77 @@ describe('Logical LINQ', () => {
     expect(person.lastname).toBe('Maker');
   });
 
-  it('Firstname Should start with bug', async () => {
+  it('Should have 32 trips in date interval', async () => {
     // Arrange
     const context = new FakeDBContext();
-
+    const data: { departureDate: Date; estimatedArrivalDate: Date } = {
+      departureDate: new Date(2000, 1, 1),
+      estimatedArrivalDate: new Date(2016, 1, 1)
+    };
     // Act
-    const persons = await context.persons
-      .where(p => p.firstname.startsWith('Bugg'))
+    const trips = await context.trips
+      .where(
+        (t, $) =>
+          t.departureDate > $.departureDate &&
+          t.estimatedArrivalDate < $.estimatedArrivalDate,
+        data
+      )
       .toList();
 
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(1);
-    expect(persons[0].firstname).toContain('Bugg');
+    expect(trips.length).toEqual(32);
+    expect(trips.some(t => t.departureDate < data.departureDate)).toBeFalsy();
+    expect(
+      trips.some(t => t.estimatedArrivalDate > data.estimatedArrivalDate)
+    ).toBeFalsy();
   });
 
-  it('Firstname Should end with gy', async () => {
+  it('Should have email starting with um and name including um', async () => {
     // Arrange
     const context = new FakeDBContext();
-
+    const $ = {
+      name: 'um'
+    };
     // Act
-    const persons = await context.persons
-      .where(p => p.firstname.endsWith('uggy'))
+    const agencies = await context.agencies
+      .where(
+        (a, _) =>
+          a.email.endsWith(_.name) || (a.name.includes(_.name) && a.id > 45),
+        $
+      )
       .toList();
 
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(1);
-    expect(persons[0].firstname).toContain('uggy');
+    expect(agencies.length).toEqual(8);
+    expect(agencies.some(t => !t.email.endsWith($.name) && !t.name.includes($.name))).toBeFalsy();
   });
 
-  it('Should have 41 persons traveling', async () => {
+  it('Should have 35 trips with departureDate and arrivalDate as specified', async () => {
     // Arrange
     const context = new FakeDBContext();
-
+    const data: { departureDate: Date; estimatedArrivalDate: Date } = {
+      departureDate: new Date(2000, 1, 1),
+      estimatedArrivalDate: new Date(2016, 1, 1)
+    };
     // Act
-    const persons = await context.persons
-      .where(p => p.willTravel === true)
+    const trips = await context.trips
+      .include(t => t.passengers)
+      .where(
+        (t, $) =>
+          t.departureDate > $.departureDate &&
+          (t.estimatedArrivalDate < $.estimatedArrivalDate ||
+            t.passengers.some(p => p.willTravel === true)),
+        data
+      )
       .toList();
 
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(41);
-  });
-
-  it('Should have 41 persons traveling (!!)', async () => {
-    // Arrange
-    const context = new FakeDBContext();
-
-    // Act
-    const persons = await context.persons.where(p => !!p.willTravel).toList();
-
-    context.dispose();
-
-    // Assert
-    expect(persons.length).toEqual(41);
-  });
-
-  it('Should have 59 persons not traveling (Exclamation)', async () => {
-    // Arrange
-    const context = new FakeDBContext();
-
-    // Act
-    const persons = await context.persons.where(p => !p.willTravel).toList();
-
-    context.dispose();
-
-    // Assert
-    expect(persons.length).toEqual(59);
-  });
-
-  it('Should have 59 persons not traveling', async () => {
-    // Arrange
-    const context = new FakeDBContext();
-
-    // Act
-    const persons = await context.persons
-      .where(p => p.willTravel === false)
-      .toList();
-
-    context.dispose();
-
-    // Assert
-    expect(persons.length).toEqual(59);
+    expect(trips.length).toEqual(35);
   });
 });

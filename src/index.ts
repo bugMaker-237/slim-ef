@@ -10,3 +10,5 @@ export {
 export { DbContext, IDbContext, ISavedTransaction } from './uow';
 
 export * from './repository/utilis';
+
+export * from './specification/index';

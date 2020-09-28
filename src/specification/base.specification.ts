@@ -161,7 +161,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     type: FunctionQueryType,
     func: SlimExpressionFunction<T>
   ) {
-    if (func)
+    if (type)
       this._func = {
         type,
         func
@@ -180,5 +180,19 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     this._skip = spec.getSkip();
     this._take = spec.getTake();
     this._isPagingEnabled = spec.getIsPagingEnabled();
+  }
+
+  protected clearSpecs() {
+    this._includes = [];
+    this._chainedIncludes = [];
+    this._criterias = [];
+    this._func = null;
+    this._isPagingEnabled = false;
+    this._orderBy = null;
+    this._orderByDescending = null;
+    this._selector = null;
+    this._skip = 0;
+    this._take = 0;
+    this._thenBy = null;
   }
 }

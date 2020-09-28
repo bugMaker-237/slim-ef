@@ -9,7 +9,7 @@ describe('Add person', () => {
     const person = new Person();
     person.firstname = 'Buggy';
     person.lastname = 'Maker';
-    person.IDNumber = 123456789;
+    person.IDNumber = 800;
     person.phone = '+237699977788';
 
     // Act

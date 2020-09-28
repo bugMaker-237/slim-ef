@@ -1,11 +1,11 @@
 import {
   ISpecification,
   CriteriaExpression,
-  ISQLQuerySpecificationEvaluator,
+  IQuerySpecificationEvaluator,
   QueryType,
   FunctionQueryType
 } from './specification.interface';
-import { SelectQueryBuilder, ObjectLiteral, Brackets } from 'typeorm';
+import { SelectQueryBuilder, ObjectLiteral, Brackets, WhereExpression, QueryBuilder } from 'typeorm';
 import {
   SQLConstants,
   ComparisonOperators,
@@ -21,22 +21,37 @@ import {
   ExpressionLeftHandSide,
   ISlimExpression,
   SlimExpressionFunction,
-  PrimitiveValueTypes as PrimitiveTypes
+  PrimitiveValueTypes as PrimitiveTypes,
+  ExpressionRightHandSide
 } from 'slim-exp';
 import { SQLQuerySpecificationException } from './exception';
-import { realpathSync } from 'fs';
+import { Query } from 'typeorm/driver/Query';
 
 const INITIAL_ALIAS = 'entity';
+type WhereQuery<T> = (
+  where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string)
+) => SelectQueryBuilder<T>;
+
+type Sequence<T> = { toApply: WhereQuery<T>, queryStr: string, queryParams?: Record<string, any> };
+type QuerySequence<T> = {
+  topLevelSequence: Sequence<T>[],
+  bracketSequence?: QuerySequence<T>[],
+  initialToApply: WhereQuery<T>
+}
 
 export class SQLQuerySpecificationEvaluator<T>
-  implements ISQLQuerySpecificationEvaluator<T> {
+  implements IQuerySpecificationEvaluator<T> {
   private registerdAliases = [INITIAL_ALIAS];
   private _query: SelectQueryBuilder<T>;
+  private _queryReady: boolean;
+  private _discriminator: number = 0;
 
   constructor(
     private readonly initialQuery: (alias: string) => SelectQueryBuilder<T>,
     private readonly spec: ISpecification<T>
-  ) {}
+  ) {
+    this._queryReady = false;
+  }
 
   private _applyLeftJoin(
     query: SelectQueryBuilder<T>,
@@ -132,152 +147,190 @@ export class SQLQuerySpecificationEvaluator<T>
     exp: ISlimExpression<any, any, any>,
     sqlQuery: SelectQueryBuilder<T>,
     alias: ((implicitName: string) => string) | string,
-    toApply: (
-      where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string)
-    ) => SelectQueryBuilder<T>,
+    initialToApply: WhereQuery<T>,
     closingExp?: ISlimExpression<any, any, any>,
-    setupBrackets: 'opened' | 'closing' | 'inactive' = 'inactive'
+    setupBrackets: 'inactive' | 'active' = 'inactive'
   ): SelectQueryBuilder<T> {
     try {
-      let e = exp;
-      let brakcetsQuery = [];
-      do {
-        if (e.brackets?.openingExp) {
-          this._chunkDownToQuery(
-            e.brackets.openingExp,
-            sqlQuery,
-            alias,
-            toApply,
-            e.brackets.closingExp,
-            'opened'
-          );
-        }
-
-        if (e === closingExp) {
-          setupBrackets = 'closing';
-        }
-
-        let queryStr = '';
-        let queryParams: ObjectLiteral;
-        const lhsProp = e.leftHandSide.isMethod
-          ? e.leftHandSide.propertyTree
-              .slice(0, e.leftHandSide.propertyTree.length - 1)
-              .join('.')
-          : e.leftHandSide.propertyName;
-        const rhsProp = e.rightHandSide?.propertyName;
-
-        let lhsAlias: string;
-        if (typeof alias !== 'string') {
-          lhsAlias = alias(e.expObjectName);
-        } else {
-          lhsAlias = alias;
-        }
-        let rhsAlias: string;
-        if (e.rightHandSide) {
-          if (typeof alias !== 'string') {
-            rhsAlias = alias(e.rightHandSide.implicitContextName);
-          } else {
-            rhsAlias = alias;
-          }
-        }
-        const lhsName = this._getFieldFromRegisteredAlias(lhsAlias, lhsProp);
-        const rhsName =
-          rhsProp && rhsAlias
-            ? this._getFieldFromRegisteredAlias(rhsAlias, rhsProp)
-            : '';
-
-        if (
-          e.leftHandSide.suffixOperator &&
-          !e.leftHandSide.isMethod &&
-          !e.operator &&
-          !e.rightHandSide
-        ) {
-          const suffixOp = e.leftHandSide.suffixOperator;
-          queryStr += ` ${lhsName} ${convertToSqlComparisonOperator(
-            ComparisonOperators.EQUAL_TO
-          )} ${suffixOp === '!' ? SQLConstants.FALSE : SQLConstants.TRUE}`;
-        }
-
-        if (e.leftHandSide.isMethod) {
-          const { isHandled, sqlInvokation } = this._handleFunctionInvokation(
-            lhsName,
-            lhsAlias,
-            e.expObjectName,
-            sqlQuery,
-            e.leftHandSide
-          );
-          if (!isHandled)
-            throw new SQLQuerySpecificationException(
-              'Unsupported invokable method at: ' + e.leftHandSide.propertyName
-            );
-
-          queryStr += ` ${sqlInvokation} `;
-        }
-
-        if (!e.leftHandSide.suffixOperator && e.operator && e.rightHandSide) {
-          if (e.rightHandSide.propertyType !== PrimitiveTypes.undefined) {
-            const paramName = this._getUniqueParamName(
-              e.rightHandSide.propertyName,
-              sqlQuery
-            );
-
-            queryStr += ` ${
-              e.leftHandSide.isMethod ? '' : lhsName
-            } ${convertToSqlComparisonOperator(e.operator)} :${paramName}`;
-            queryParams = {} as any;
-            queryParams[paramName] = e.rightHandSide.propertyValue;
-          } else {
-            queryStr += ` ${
-              e.leftHandSide.isMethod ? '' : lhsName
-            } ${convertToSqlComparisonOperator(e.operator)} ${rhsName}`;
-          }
-        }
-        if (queryStr.trim()) {
-          if (setupBrackets === 'inactive') {
-            toApply.call(sqlQuery, queryStr, queryParams);
-          } else if (setupBrackets === 'opened') {
-            brakcetsQuery.push({ toApply, queryStr, queryParams });
-          } else {
-            const b = new Brackets(whereExp => {
-              for (const {
-                toApply: t,
-                queryStr: q,
-                queryParams: p
-              } of brakcetsQuery) {
-                t.call(whereExp, q, p);
-              }
-            });
-            toApply.call(sqlQuery, b);
-            brakcetsQuery = [];
-            setupBrackets = 'inactive';
-          }
-        }
-
-        if (e.next) {
-          toApply = this._isOrBinding(e.next.bindedBy)
-            ? sqlQuery.orWhere
-            : sqlQuery.andWhere;
-        }
-        e = e?.next?.followedBy;
-      } while (e);
+      const querySequence = this._getQuerySequence(
+        exp,
+        alias,
+        initialToApply,
+        closingExp,
+        setupBrackets
+      );
+      this._applyRecursively(sqlQuery, querySequence);
 
       return sqlQuery;
     } catch (error) {
       throw new SQLQuerySpecificationException(error.message);
     }
   }
+  private _applyRecursively(sqlQuery: WhereExpression, querySequence: QuerySequence<T>) {
+    const first = querySequence;
+
+    for (const s of first.topLevelSequence) {
+      s.toApply.call(sqlQuery, s.queryStr, s.queryParams);
+    }
+    for (const b of first.bracketSequence) {
+      const brackets = new Brackets(wh => {
+        this._applyRecursively(wh, b);
+      });
+      b.initialToApply.call(sqlQuery, brackets);
+    }
+  }
+
+  private _getQuerySequence(
+    exp: ISlimExpression<any, any, any>,
+    alias: ((implicitName: string) => string) | string,
+    initialToApply: WhereQuery<T>,
+    closingExp?: ISlimExpression<any, any, any>,
+    setupBrackets: 'inactive' | 'active' = 'inactive')
+    : QuerySequence<T> {
+    let e = exp;
+    let toApply = initialToApply;
+    const querySequence: QuerySequence<T> = { topLevelSequence: [], bracketSequence: [], initialToApply };
+    do {
+      // When trying to understand this stuff, remember that logical operators are
+      // associative, no matter the other be it exp1 && exp2 or exp2 && exp1 the
+      // result is the same. So the real focus is to be able to handle the paranthesis
+      // in a clean and oderable manner
+      if (e.brackets?.openingExp) {
+        querySequence.bracketSequence.push(this._getQuerySequence(
+          e.brackets.openingExp,
+          alias,
+          toApply,
+          e.brackets.closingExp,
+          'active'
+        ));
+      }
+
+      if (e.computeHash() === closingExp?.computeHash()) {
+        setupBrackets = 'inactive';
+      }
+
+      const sequence: QuerySequence<T> = this._buildQueryFromExpression(
+        e.leftHandSide,
+        e.rightHandSide,
+        e.operator,
+        e.expObjectName,
+        alias,
+        toApply,
+        setupBrackets !== 'inactive'
+      );
+      querySequence.topLevelSequence.push(...(sequence.topLevelSequence.filter(s => !!s.queryStr) || []));
+      querySequence.bracketSequence.push(...(sequence.bracketSequence || []));
+
+      if (e.next) {
+        toApply = this._isOrBinding(e.next.bindedBy)
+          ? SelectQueryBuilder.prototype.orWhere
+          : SelectQueryBuilder.prototype.andWhere;
+      }
+      e = e?.next?.followedBy;
+    } while (e);
+
+    return querySequence;
+  }
+
+  private _buildQueryFromExpression(
+    lhs: ExpressionLeftHandSide,
+    rhs: ExpressionRightHandSide,
+    operator: string,
+    expObjectName: string,
+    alias: string | ((implicitName: string) => string),
+    toApply?: WhereQuery<T>,
+    isInBracketGroup: boolean = false
+  ): QuerySequence<T> {
+
+    let queryStr = '';
+    let queryParams: ObjectLiteral;
+    if (!lhs && !rhs) {
+      return { topLevelSequence: [{ toApply, queryStr, queryParams }], initialToApply: toApply };
+    }
+
+    const lhsProp = lhs.isMethod
+      ? lhs.propertyTree
+        .slice(0, lhs.propertyTree.length - 1)
+        .join('.')
+      : lhs.propertyName;
+    const rhsProp = rhs?.propertyName;
+
+    let lhsAlias: string;
+    if (typeof alias !== 'string') {
+      lhsAlias = alias(expObjectName);
+    } else {
+      lhsAlias = alias;
+    }
+    let rhsAlias: string;
+    if (rhs) {
+      if (typeof alias !== 'string') {
+        rhsAlias = alias(rhs.implicitContextName);
+      } else {
+        rhsAlias = alias;
+      }
+    }
+    const lhsName = this._getFieldFromRegisteredAlias(lhsAlias, lhsProp);
+    const rhsName =
+      rhsProp && rhsAlias
+        ? this._getFieldFromRegisteredAlias(rhsAlias, rhsProp)
+        : '';
+
+    if (
+      lhs.suffixOperator &&
+      !lhs.isMethod &&
+      !operator &&
+      !rhs
+    ) {
+      const suffixOp = lhs.suffixOperator;
+      queryStr += ` ${lhsName} ${convertToSqlComparisonOperator(
+        ComparisonOperators.EQUAL_TO
+      )} ${suffixOp === '!' ? SQLConstants.FALSE : SQLConstants.TRUE}`;
+    }
+
+    if (lhs.isMethod) {
+      return this._handleFunctionInvokation(
+        lhsName,
+        lhsAlias,
+        expObjectName,
+        lhs,
+        toApply,
+        isInBracketGroup
+      );
+    }
+
+    if (!lhs.suffixOperator && operator && rhs) {
+      if (rhs.propertyType !== PrimitiveTypes.undefined) {
+        const paramName = this._getUniqueParamName(
+          rhs.propertyName
+        );
+
+        queryStr += ` ${
+          lhs.isMethod ? '' : lhsName
+          } ${convertToSqlComparisonOperator(operator)} :${paramName}`;
+        queryParams = {} as any;
+        queryParams[paramName] = rhs.propertyValue;
+      } else {
+        queryStr += ` ${
+          lhs.isMethod ? '' : lhsName
+          } ${convertToSqlComparisonOperator(operator)} ${rhsName}`;
+      }
+    }
+    return { topLevelSequence: [{ toApply, queryStr, queryParams }], initialToApply: toApply };
+  }
 
   private _handleFunctionInvokation(
     name: string,
     initialAlias: string,
     initialExpObjectName: string,
-    query: SelectQueryBuilder<T>,
-    leftHandSide: ExpressionLeftHandSide
-  ): { isHandled: any; sqlInvokation: any } {
+    leftHandSide: ExpressionLeftHandSide,
+    toApply?: WhereQuery<T>,
+    isInBracketGroup: boolean = false
+  ): QuerySequence<T> {
     if (!leftHandSide.content)
       throw new Error('LeftHandSide Content not defined');
 
     let func: string;
+    let sqlPart: string;
     const propName = name;
     const content = leftHandSide.content;
     if (
@@ -285,15 +338,15 @@ export class SQLQuerySpecificationEvaluator<T>
       content.methodName in SQLStringFunctions
     ) {
       func = SQLStringFunctions[content.methodName];
-      const sqlPart = format(func, propName, content.primitiveValue.toString());
-      return { isHandled: true, sqlInvokation: sqlPart };
+      sqlPart = format(func, propName, content.primitiveValue.toString());
+      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
     } else if (
       !(content.type in PrimitiveTypes) &&
       content.methodName in SQLArrayFunctions
     ) {
       func = SQLArrayFunctions[content.methodName];
-      const sqlPart = format(func, propName, content.primitiveValue.toString());
-      return { isHandled: true, sqlInvokation: sqlPart };
+      sqlPart = format(func, propName, content.primitiveValue.toString());
+      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
     } else if (
       !(content.type in PrimitiveTypes) &&
       content.methodName in SQLJoinFunctions &&
@@ -318,46 +371,34 @@ export class SQLQuerySpecificationEvaluator<T>
         if (exp) {
           contextNamesAndalias.set(exp.expObjectName, alias);
           if (exp.rightHandSide) {
-            this._chunkDownToQuery(
+            return this._getQuerySequence(
               exp,
-              query,
               o => contextNamesAndalias.get(o),
-              query.andWhere
+              toApply,
+              null,
+              isInBracketGroup ? 'active' : 'inactive'
             );
           }
         }
         LHS = exp?.leftHandSide;
       } while (LHS && LHS.isMethod && LHS.content && LHS.content.isExpression);
 
-      return { isHandled: true, sqlInvokation: '' };
+      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
     }
     throw new Error('Unsupported Function Invokation: ' + content.methodName);
   }
 
   private _getUniqueParamName(
-    paramName: string,
-    sqlQuery: SelectQueryBuilder<T>
+    paramName: string
   ): string {
     paramName = paramName.replace(/\[|\]|\(|\)|\*|\+|\-|\'|\"/g, '');
-    const keys = Object.keys(sqlQuery.getParameters());
-    const similarKeys = keys.filter(k => k.startsWith(paramName));
-    if (!similarKeys.length) return paramName;
-    if (similarKeys.length === 1) return paramName + '_1';
 
-    // removing first non-numbered param
-    similarKeys.shift();
-
-    let highOrderKey = similarKeys
-      .map(k => Number.parseInt(k.replace(paramName + '_', ''), 0))
-      .reduce((p, c) => (p > c ? p : c), 0);
-
-    return paramName + '_' + ++highOrderKey;
+    return paramName + '_' + ++this._discriminator;
   }
 
   public getQuery(): string {
     try {
       this._query = this.initialQuery(INITIAL_ALIAS).select();
-
       // tslint:disable-next-line: one-variable-per-declaration
       const includes = this.spec.getIncludes(),
         chainedIncludes = this.spec.getChainedIncludes(),
@@ -411,7 +452,7 @@ export class SQLQuerySpecificationEvaluator<T>
         }
       }
       if (func) {
-        this._applyFunction(this._query, func);
+        this._query = this._applyFunction(this._query, func);
       } else {
         let propertyAlias;
         let isAsc = false;
@@ -451,7 +492,7 @@ export class SQLQuerySpecificationEvaluator<T>
           );
         }
       }
-
+      this._queryReady = true;
       return this._query.getQuery();
     } catch (error) {
       throw new SQLQuerySpecificationException(error);
@@ -463,31 +504,39 @@ export class SQLQuerySpecificationEvaluator<T>
       type: FunctionQueryType;
       func: SlimExpressionFunction<T>;
     }
-  ) {
-    const field = this._getPropertyAlias(value.func);
-    query.select(`${value.type}(${field}) as ${value.type}`);
+  ): SelectQueryBuilder<T> {
+
+    const field = value.func ? this._getPropertyAlias(value.func) : "*";
+    return query.select(`${value.type}(${field}) as \`${value.type}\``);
   }
 
   public async executeQuery<R = T[]>(type: QueryType): Promise<R> {
-    this.getQuery();
+    if (!this._queryReady)
+      this.getQuery();
     let toApply;
+    let defaultVal;
     switch (type) {
       case QueryType.ALL:
         toApply = this._query.getMany;
+        defaultVal = [];
         break;
       case QueryType.ONE:
         toApply = this._query.getOne;
+        defaultVal = {};
         break;
       case QueryType.RAW_ONE:
         toApply = this._query.getRawOne;
+        defaultVal = {};
         break;
       case QueryType.RAW_ALL:
         toApply = this._query.getRawMany;
+        defaultVal = [];
         break;
 
       default:
         break;
     }
-    return (await toApply.call(this._query)) || [];
+    const result = (await toApply.call(this._query)) || defaultVal;
+    return result;
   }
 }

@@ -24,3 +24,19 @@ export interface ISavedTransaction {
   updated: any[];
   deleted: any[];
 }
+export interface ILogger {
+  log<TState>(
+    logLevel: 'error' | 'warning' | 'info',
+    state: TState,
+    exception?: Error
+  ): void;
+}
+export type ILoggerCategoryName = 'config' | 'query';
+export interface ILoggerFactory {
+  createLogger: (categoryName: ILoggerCategoryName) => ILogger;
+}
+
+export interface IDbContextOptionsBuilder {
+  useLoggerFactory(loggerFactory: ILoggerFactory): this;
+  enableSensitiveLogging(enabled: boolean): this;
+}

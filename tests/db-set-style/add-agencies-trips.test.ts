@@ -31,10 +31,15 @@ describe('Add agencies and trips', () => {
     t2.agencyId = agency.id;
     context.trips.add(t1, t2);
     await context.saveChanges();
+
+    const dbAgency = await context.agencies.first((a, $) => a.id === $.id, { id: agency.id });
+
     context.dispose();
 
     // Assert
     expect(agency.id).toBeDefined();
+    expect(agency.id).toEqual(dbAgency.id);
+    expect(agency.name).toEqual(dbAgency.name);
     expect(t1.id).toBeDefined();
     expect(t2.id).toBeDefined();
   });

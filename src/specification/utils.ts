@@ -52,7 +52,7 @@ export const SQLArrayFunctions = {
 };
 
 export const SQLJoinFunctions = {
-  filter: 'filter'
+  some: 'some'
 };
 export const ComparisonOperators = {
   ALL: ['==', '===', '>=', '<=', '!=', '!==', '<', '>'],
