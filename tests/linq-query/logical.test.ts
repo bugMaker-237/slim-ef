@@ -63,17 +63,22 @@ describe('Logical LINQ', () => {
 
     // Assert
     expect(agencies.length).toEqual(8);
-    expect(agencies.some(t => !t.email.endsWith($.name) && !t.name.includes($.name))).toBeFalsy();
+    expect(
+      agencies.some(t => !t.email.endsWith($.name) && !t.name.includes($.name))
+    ).toBeFalsy();
   });
 
   it('Should have 35 trips with departureDate and arrivalDate as specified', async () => {
-    // Arrange
+    // init
     const context = new FakeDBContext();
-    const data: { departureDate: Date; estimatedArrivalDate: Date } = {
+    const data: {
+      departureDate: Date;
+      estimatedArrivalDate: Date;
+    } = {
       departureDate: new Date(2000, 1, 1),
       estimatedArrivalDate: new Date(2016, 1, 1)
     };
-    // Act
+    // getting the data
     const trips = await context.trips
       .include(t => t.passengers)
       .where(

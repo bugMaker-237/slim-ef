@@ -507,7 +507,7 @@ export class SQLQuerySpecificationEvaluator<T>
   ): SelectQueryBuilder<T> {
 
     const field = value.func ? this._getPropertyAlias(value.func) : "*";
-    return query.select(`${value.type}(${field}) as \`${value.type}\``);
+    return query.select(`${value.type}(${field}) as ${value.type}`);
   }
 
   public async executeQuery<R = T[]>(type: QueryType): Promise<R> {

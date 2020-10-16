@@ -12,46 +12,49 @@ import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
 import { EmptySetException } from './exception';
 import { timeStamp } from 'console';
+import { IInternalDbContext } from '../uow/_internal.interface';
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
-export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
-  extends BaseSpecification<T>
-  implements IDbSet<T, R, E> {
+export class DbSet<
+  T extends object = any,
+  R extends T = any,
+  E = DeepPartial<T>
+> extends BaseSpecification<T> implements IDbSet<T, R, E> {
   private _lastInclude: SlimExpressionFunction<T>;
   private _currentSkip: number;
   private _currentTake: number;
   private _ignoreFilters: boolean;
   private _underlyingType: new (...args) => T;
 
-  constructor(public context: IDbContext | IUnitOfWork) {
+  constructor(context: IDbContext | IUnitOfWork);
+  constructor(public context: (IDbContext | IUnitOfWork) & IInternalDbContext) {
     super();
   }
 
-  public get [UnderlyingType]() {
+  private get [UnderlyingType]() {
     if (!this._underlyingType) {
       this._underlyingType = getEntitySchema(this);
     }
     return this._underlyingType;
   }
 
-  public set [UnderlyingType](value) {
+  private set [UnderlyingType](value) {
     if (value) {
       this._underlyingType = value;
     }
   }
 
-
   add(...entities: E[]): Promise<void> | void {
     return this.context.add(...patchM(this[UnderlyingType])(...entities));
   }
 
-  attach(...entities: E[]): Promise<void> | void {
-    return this.context.attach(...patchM(this[UnderlyingType])(...entities));
+  update(...entities: E[]): Promise<void> | void {
+    return this.context.update(...patchM(this[UnderlyingType])(...entities));
   }
 
-  detach(...entities: E[]): Promise<void> | void {
-    return this.context.detach(...patchM(this[UnderlyingType])(...entities));
+  unTrack(...entities: E[]): Promise<void> | void {
+    return this.context.unTrack(...patchM(this[UnderlyingType])(...entities));
   }
 
   remove(...entities: E[]): Promise<void> | void {
@@ -59,7 +62,7 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
   }
 
   async find(id: any): Promise<T> {
-    return await this.context.find<T>(this, id);
+    return await this.context.find<T>(this[UnderlyingType], id);
   }
 
   async exists(id: any): Promise<boolean> {
@@ -150,7 +153,9 @@ export class DbSet<T extends object = any, R extends T = T, E = DeepPartial<T>>
     return this;
   }
 
-  async count<C extends object>(func?: SlimExpressionFunction<T, boolean, C>): Promise<number> {
+  async count<C extends object>(
+    func?: SlimExpressionFunction<T, boolean, C>
+  ): Promise<number> {
     this.addCriteria(func);
     this.applyFunction('COUNT', null);
     return Number.parseFloat(

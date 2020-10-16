@@ -1,20 +1,70 @@
 import { SelectQueryBuilder } from 'typeorm';
 import { IDbSet } from '../repository';
-import { DbSet } from '../repository/db-set';
-import { QueryType } from '../specification/specification.interface';
 
 export interface IDbContext {
+  /**
+   * Begins tracking the given entity, and any other reachable entities that are not
+   * already being tracked, in the Added state such that they will be inserted
+   * into the database when SaveChanges() is called.
+   * @param entities
+   */
   add<T>(...entities: T[]): Promise<void> | void;
-  attach<T>(...entities: T[]): Promise<void> | void;
+
+  /**
+   * Begins tracking the given entity and entries reachable from the given entity using
+   * the Modified state by default such that they will be updated
+   * in the database when SaveChanges() is called.
+   * @param entities
+   */
+  update<T>(...entities: T[]): Promise<void> | void;
+
+  /**
+   * Begins tracking the given entity in the Deleted state such that it will be removed
+   * from the database when SaveChanges() is called.
+   * @param entities
+   */
   remove<T>(...entities: T[]): Promise<void> | void;
-  detach<T>(...entities: T[]): Promise<void> | void;
-  find<T>(type: any, id: any): Promise<T> | T;
-  execute<T extends object, R = T[]>(
-    queryable: IDbSet<T>,
-    type: QueryType,
-    ignoreFilters?: boolean
-  ): Promise<R>;
+
+  /**
+   * Removes entities from the list of currently tracked entities
+   * @param entities
+   */
+  unTrack<T>(...entities: T[]): Promise<void> | void;
+  /**
+   * Finds an entity with the given primary key values. If an entity with the given
+   * primary key values is being tracked by the context, then it is returned
+   * immediately without making a request to the database. Otherwise, a query is made
+   * to the database for an entity with the given primary key values and this entity,
+   * if found, is attached to the context and returned. If no entity is found, then
+   * undefined is returned.
+   * @param type The entity type
+   * @param id The entity id
+   */
+  find<T>(type: new (...args: any) => T, id: any): Promise<T> | T;
+  /**
+   * Creates a database connextion and executes the given query
+   * @param query
+   * @param parameters
+   */
+  query(query: string, parameters: any[]): Promise<any>;
+
+  rollback(entityType: any | undefined): void;
+  /**
+   * Creates a DbSet<TEntity> that can be used to query and save instances of TEntity.
+   * @param type
+   */
+  set<T extends object>(type: new (...args: any) => T): IDbSet<T>;
+
+  /**
+   * Saves all changes made in this context to the database.
+   * This method will automatically call DetectChanges() to discover any changes to
+   * entity instances before saving to the underlying database.
+   */
   saveChanges(): void;
+  /**
+   * Releases the allocated resources for this context.
+   */
+  dispose(): void;
 }
 
 export type QueryInitializer<T> = (alias: string) => SelectQueryBuilder<T>;

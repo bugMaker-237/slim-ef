@@ -32,7 +32,9 @@ describe('Add agencies and trips', () => {
     context.trips.add(t1, t2);
     await context.saveChanges();
 
-    const dbAgency = await context.agencies.first((a, $) => a.id === $.id, { id: agency.id });
+    const dbAgency = await context.agencies.first((a, $) => a.id === $.id, {
+      id: agency.id
+    });
 
     context.dispose();
 

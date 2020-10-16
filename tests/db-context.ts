@@ -1,4 +1,5 @@
 import { Connection } from 'typeorm';
+import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 import {
   DbContext,
   DbSet,
@@ -16,15 +17,11 @@ export class FakeDBContext extends DbContext {
   constructor() {
     super(
       new Connection({
-        type: 'mysql',
-        host: 'localhost',
-        port: 3306,
-        username: 'admin',
-        password: 'admin0000',
-        database: 'slim_ef_test',
+        type: 'sqlite',
+        database: ':memory:',
         entities: [Person, Agency, Trip],
         synchronize: true
-      }),
+      } as SqliteConnectionOptions),
       SQLQuerySpecificationEvaluator
     );
   }

@@ -1,12 +1,8 @@
-import {
-  Connection,
-  QueryRunner,
-  Repository
-} from 'typeorm';
+import { Connection, QueryRunner, Repository } from 'typeorm';
 import { getEntitySchema, getEntitySet, getEntitySetKeys } from '../repository';
 import { DbSet, UnderlyingType } from '../repository/db-set';
-import { IDbSet } from '../repository/interfaces';
-import { IInternalDbSet } from '../repository/_internal.interface';
+import { IDbSet, IQueryable } from '../repository/interfaces';
+import { DeepPartial, IInternalDbSet } from '../repository/_internal.interface';
 import {
   QuerySpecificationEvaluatorConstructor,
   QueryType
@@ -19,14 +15,14 @@ import {
 } from './interfaces';
 import { DbContextModelBuilder } from './model-builder';
 import { DbContextOptionsBuilder } from './options-builder';
+import { IInternalDbContext } from './_internal.interface';
 interface IEntity {
   id?: any;
 }
-export abstract class DbContext implements IDbContext {
+export abstract class DbContext implements IDbContext, IInternalDbContext {
   private _entitySets: WeakMap<any, Repository<any>>;
   private _new: IEntity[] = [];
   private _dirty: IEntity[] = [];
-  private _dirtyAsDeleted: IEntity[] = [];
   private _deleted: IEntity[] = [];
   private _queryRunner: QueryRunner;
   private _modelBuilder: DbContextModelBuilder<any>;
@@ -41,6 +37,7 @@ export abstract class DbContext implements IDbContext {
     this._optionsBuilder = new DbContextOptionsBuilder();
     this._initialise();
   }
+
   private _initialise() {
     this._setUnderlyingEntityType();
     this.onModelCreation(this._modelBuilder);
@@ -55,24 +52,42 @@ export abstract class DbContext implements IDbContext {
     optionsBuilder: IDbContextOptionsBuilder
   ): void;
 
-  public add<T extends IEntity>(...entities: T[]) {
-    this._new.push(...entities);
+  public set<T extends object>(type: new (...args: any) => T): IDbSet<T> {
+    const dbSet = new DbSet<T, T>(this);
+    dbSet[UnderlyingType] = type;
+    return dbSet as any;
   }
-  public detach<T extends IEntity>(entity: T) {
+
+  public add<T extends IEntity>(...entities: T[]) {
+    this._new.push(...this._throwIfNullFound(entities, 'add'));
+  }
+
+  public unTrack<T extends IEntity>(entity: T) {
     this._new = [...this._new.filter(n => n !== entity)];
     this._dirty = [...this._dirty.filter(n => n !== entity)];
     this._deleted = [...this._deleted.filter(n => n !== entity)];
-    this._dirtyAsDeleted = [...this._deleted.filter(n => n !== entity)];
   }
-  public attach<T extends IEntity>(...entities: T[]) {
-    this._dirty.push(...entities);
+
+  public update<T extends IEntity>(...entities: T[]) {
+    this._dirty.push(...this._throwIfNullFound(entities, 'attach'));
   }
 
   public remove<T extends IEntity>(...entities: T[]) {
-    this._deleted.push(...entities);
+    this._deleted.push(...this._throwIfNullFound(entities, 'remove'));
+  }
+
+  private _throwIfNullFound<T extends IEntity>(
+    entities: T[],
+    method: string
+  ): T[] {
+    if (entities.some(e => !e)) {
+      throw new Error('Entities can not be null when call ' + method);
+    }
+    return entities;
   }
 
   public async find<T extends IEntity>(type: any, id: any): Promise<T> {
+    await this._tryOpenConnection();
     const repo = this._getRepository(type);
     if (repo) {
       return (await repo.findOne(id)) as T;
@@ -86,7 +101,6 @@ export abstract class DbContext implements IDbContext {
       this._new = [...this._new.filter(n => typeof n !== type)];
       this._dirty = [...this._dirty.filter(n => typeof n === type)];
       this._deleted = [...this._deleted.filter(n => typeof n === type)];
-      this._dirtyAsDeleted = [...this._deleted.filter(n => typeof n === type)];
     } else {
       this._dispose();
     }
@@ -101,7 +115,6 @@ export abstract class DbContext implements IDbContext {
       const added = await this._commitNew();
       const toUpdate = await this._commitDirty();
       const deleted = await this._commitDeleted();
-      deleted.push(...(await this._commitDirtyAsDeleted()));
       await this._queryRunner.commitTransaction();
       const updated = withoutRefresh
         ? toUpdate
@@ -180,6 +193,7 @@ export abstract class DbContext implements IDbContext {
       }
     }
   }
+
   private async _getUpdates(toUpdate: IEntity[]): Promise<IEntity[]> {
     const updated = [];
     for (const n of toUpdate) {
@@ -188,6 +202,7 @@ export abstract class DbContext implements IDbContext {
     }
     return updated;
   }
+
   private async _commitDeleted(): Promise<boolean[]> {
     const deleted = [];
     for (const n of this._deleted) {
@@ -196,12 +211,9 @@ export abstract class DbContext implements IDbContext {
     }
     return deleted;
   }
+
   private async _commitDirty(): Promise<IEntity[]> {
     return await this._commitDirtyAll(this._dirty);
-  }
-
-  private async _commitDirtyAsDeleted(): Promise<boolean[]> {
-    return (await this._commitDirtyAll(this._dirtyAsDeleted)).map(_ => !!_);
   }
 
   private async _commitDirtyAll(dirty: IEntity[]): Promise<IEntity[]> {
@@ -212,6 +224,7 @@ export abstract class DbContext implements IDbContext {
     }
     return updated;
   }
+
   private async _commitNew(): Promise<IEntity[]> {
     const added = [];
     for (const n of this._new) {
