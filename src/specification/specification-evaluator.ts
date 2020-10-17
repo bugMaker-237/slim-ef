@@ -5,7 +5,13 @@ import {
   QueryType,
   FunctionQueryType
 } from './specification.interface';
-import { SelectQueryBuilder, ObjectLiteral, Brackets, WhereExpression, QueryBuilder } from 'typeorm';
+import {
+  SelectQueryBuilder,
+  ObjectLiteral,
+  Brackets,
+  WhereExpression,
+  QueryBuilder
+} from 'typeorm';
 import {
   SQLConstants,
   ComparisonOperators,
@@ -32,12 +38,16 @@ type WhereQuery<T> = (
   where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string)
 ) => SelectQueryBuilder<T>;
 
-type Sequence<T> = { toApply: WhereQuery<T>, queryStr: string, queryParams?: Record<string, any> };
+type Sequence<T> = {
+  toApply: WhereQuery<T>;
+  queryStr: string;
+  queryParams?: Record<string, any>;
+};
 type QuerySequence<T> = {
-  topLevelSequence: Sequence<T>[],
-  bracketSequence?: QuerySequence<T>[],
-  initialToApply: WhereQuery<T>
-}
+  topLevelSequence: Sequence<T>[];
+  bracketSequence?: QuerySequence<T>[];
+  initialToApply: WhereQuery<T>;
+};
 
 export class SQLQuerySpecificationEvaluator<T>
   implements IQuerySpecificationEvaluator<T> {
@@ -166,7 +176,10 @@ export class SQLQuerySpecificationEvaluator<T>
       throw new SQLQuerySpecificationException(error.message);
     }
   }
-  private _applyRecursively(sqlQuery: WhereExpression, querySequence: QuerySequence<T>) {
+  private _applyRecursively(
+    sqlQuery: WhereExpression,
+    querySequence: QuerySequence<T>
+  ) {
     const first = querySequence;
 
     for (const s of first.topLevelSequence) {
@@ -185,24 +198,30 @@ export class SQLQuerySpecificationEvaluator<T>
     alias: ((implicitName: string) => string) | string,
     initialToApply: WhereQuery<T>,
     closingExp?: ISlimExpression<any, any, any>,
-    setupBrackets: 'inactive' | 'active' = 'inactive')
-    : QuerySequence<T> {
+    setupBrackets: 'inactive' | 'active' = 'inactive'
+  ): QuerySequence<T> {
     let e = exp;
     let toApply = initialToApply;
-    const querySequence: QuerySequence<T> = { topLevelSequence: [], bracketSequence: [], initialToApply };
+    const querySequence: QuerySequence<T> = {
+      topLevelSequence: [],
+      bracketSequence: [],
+      initialToApply
+    };
     do {
       // When trying to understand this stuff, remember that logical operators are
       // associative, no matter the other be it exp1 && exp2 or exp2 && exp1 the
       // result is the same. So the real focus is to be able to handle the paranthesis
       // in a clean and oderable manner
       if (e.brackets?.openingExp) {
-        querySequence.bracketSequence.push(this._getQuerySequence(
-          e.brackets.openingExp,
-          alias,
-          toApply,
-          e.brackets.closingExp,
-          'active'
-        ));
+        querySequence.bracketSequence.push(
+          this._getQuerySequence(
+            e.brackets.openingExp,
+            alias,
+            toApply,
+            e.brackets.closingExp,
+            'active'
+          )
+        );
       }
 
       if (e.computeHash() === closingExp?.computeHash()) {
@@ -218,7 +237,9 @@ export class SQLQuerySpecificationEvaluator<T>
         toApply,
         setupBrackets !== 'inactive'
       );
-      querySequence.topLevelSequence.push(...(sequence.topLevelSequence.filter(s => !!s.queryStr) || []));
+      querySequence.topLevelSequence.push(
+        ...(sequence.topLevelSequence.filter(s => !!s.queryStr) || [])
+      );
       querySequence.bracketSequence.push(...(sequence.bracketSequence || []));
 
       if (e.next) {
@@ -241,17 +262,17 @@ export class SQLQuerySpecificationEvaluator<T>
     toApply?: WhereQuery<T>,
     isInBracketGroup: boolean = false
   ): QuerySequence<T> {
-
     let queryStr = '';
     let queryParams: ObjectLiteral;
     if (!lhs && !rhs) {
-      return { topLevelSequence: [{ toApply, queryStr, queryParams }], initialToApply: toApply };
+      return {
+        topLevelSequence: [{ toApply, queryStr, queryParams }],
+        initialToApply: toApply
+      };
     }
 
     const lhsProp = lhs.isMethod
-      ? lhs.propertyTree
-        .slice(0, lhs.propertyTree.length - 1)
-        .join('.')
+      ? lhs.propertyTree.slice(0, lhs.propertyTree.length - 1).join('.')
       : lhs.propertyName;
     const rhsProp = rhs?.propertyName;
 
@@ -275,12 +296,7 @@ export class SQLQuerySpecificationEvaluator<T>
         ? this._getFieldFromRegisteredAlias(rhsAlias, rhsProp)
         : '';
 
-    if (
-      lhs.suffixOperator &&
-      !lhs.isMethod &&
-      !operator &&
-      !rhs
-    ) {
+    if (lhs.suffixOperator && !lhs.isMethod && !operator && !rhs) {
       const suffixOp = lhs.suffixOperator;
       queryStr += ` ${lhsName} ${convertToSqlComparisonOperator(
         ComparisonOperators.EQUAL_TO
@@ -300,22 +316,39 @@ export class SQLQuerySpecificationEvaluator<T>
 
     if (!lhs.suffixOperator && operator && rhs) {
       if (rhs.propertyType !== PrimitiveTypes.undefined) {
-        const paramName = this._getUniqueParamName(
-          rhs.propertyName
-        );
+        const paramName = this._getUniqueParamName(rhs.propertyName);
 
         queryStr += ` ${
           lhs.isMethod ? '' : lhsName
-          } ${convertToSqlComparisonOperator(operator)} :${paramName}`;
+        } ${convertToSqlComparisonOperator(operator)} :${paramName}`;
         queryParams = {} as any;
-        queryParams[paramName] = rhs.propertyValue;
+
+        // we need to format the date because typeorm has issue handling it with
+        // sqlite
+        queryParams[paramName] =
+          rhs.propertyType === PrimitiveTypes.date
+            ? this._polyfillDate(rhs.propertyValue)
+            : rhs.propertyValue;
       } else {
         queryStr += ` ${
           lhs.isMethod ? '' : lhsName
-          } ${convertToSqlComparisonOperator(operator)} ${rhsName}`;
+        } ${convertToSqlComparisonOperator(operator)} ${rhsName}`;
       }
     }
-    return { topLevelSequence: [{ toApply, queryStr, queryParams }], initialToApply: toApply };
+    return {
+      topLevelSequence: [{ toApply, queryStr, queryParams }],
+      initialToApply: toApply
+    };
+  }
+  private _polyfillDate(val: Date): any {
+    const pad = (num: number, p = 2, bf = true) =>
+      bf ? num.toString().padStart(p, '0') : num.toString().padEnd(p, '0');
+
+    return `${val.getFullYear()}-${pad(val.getMonth())}-${pad(
+      val.getDate()
+    )} ${pad(val.getHours())}-${pad(val.getMinutes())}-${pad(
+      val.getSeconds()
+    )}.${pad(val.getMilliseconds(), 3, false)}`;
   }
 
   private _handleFunctionInvokation(
@@ -339,14 +372,20 @@ export class SQLQuerySpecificationEvaluator<T>
     ) {
       func = SQLStringFunctions[content.methodName];
       sqlPart = format(func, propName, content.primitiveValue.toString());
-      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
+      return {
+        topLevelSequence: [{ toApply, queryStr: sqlPart }],
+        initialToApply: toApply
+      };
     } else if (
       !(content.type in PrimitiveTypes) &&
       content.methodName in SQLArrayFunctions
     ) {
       func = SQLArrayFunctions[content.methodName];
       sqlPart = format(func, propName, content.primitiveValue.toString());
-      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
+      return {
+        topLevelSequence: [{ toApply, queryStr: sqlPart }],
+        initialToApply: toApply
+      };
     } else if (
       !(content.type in PrimitiveTypes) &&
       content.methodName in SQLJoinFunctions &&
@@ -383,14 +422,15 @@ export class SQLQuerySpecificationEvaluator<T>
         LHS = exp?.leftHandSide;
       } while (LHS && LHS.isMethod && LHS.content && LHS.content.isExpression);
 
-      return { topLevelSequence: [{ toApply, queryStr: sqlPart }], initialToApply: toApply };
+      return {
+        topLevelSequence: [{ toApply, queryStr: sqlPart }],
+        initialToApply: toApply
+      };
     }
     throw new Error('Unsupported Function Invokation: ' + content.methodName);
   }
 
-  private _getUniqueParamName(
-    paramName: string
-  ): string {
+  private _getUniqueParamName(paramName: string): string {
     paramName = paramName.replace(/\[|\]|\(|\)|\*|\+|\-|\'|\"/g, '');
 
     return paramName + '_' + ++this._discriminator;
@@ -505,14 +545,12 @@ export class SQLQuerySpecificationEvaluator<T>
       func: SlimExpressionFunction<T>;
     }
   ): SelectQueryBuilder<T> {
-
-    const field = value.func ? this._getPropertyAlias(value.func) : "*";
+    const field = value.func ? this._getPropertyAlias(value.func) : '*';
     return query.select(`${value.type}(${field}) as ${value.type}`);
   }
 
   public async executeQuery<R = T[]>(type: QueryType): Promise<R> {
-    if (!this._queryReady)
-      this.getQuery();
+    if (!this._queryReady) this.getQuery();
     let toApply;
     let defaultVal;
     switch (type) {

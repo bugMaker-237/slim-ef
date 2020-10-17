@@ -1,17 +1,12 @@
-#
-# TABLE STRUCTURE FOR: agency
-#
-
-DROP TABLE IF EXISTS `agency`;
-
+PRAGMA synchronous = OFF;
+PRAGMA journal_mode = MEMORY;
+BEGIN TRANSACTION;
 CREATE TABLE `agency` (
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `phone` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `email` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+  `name` varchar(255) NOT NULL
+,  `phone` varchar(255) NOT NULL
+,  `email` varchar(255) DEFAULT NULL
+,  `id` integer NOT NULL PRIMARY KEY AUTOINCREMENT
+);
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Molestias voluptatibus.', '582-214-5404', 'hgusikowski@example.com', 1);
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Deleniti impedit.', '1-161-025-3477x922', 'janet95@example.org', 2);
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Vitae maiores dolor.', '108.353.7124x3544', 'dave.torphy@example.net', 3);
@@ -112,28 +107,18 @@ INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Vitae rem adipisc
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Est perspiciatis.', '651-723-6105', 'kautzer.libbie@example.net', 98);
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Ratione sed.', '1-639-019-7638x318', 'paige.greenholt@example.com', 99);
 INSERT INTO `agency` (`name`, `phone`, `email`, `id`) VALUES ('Accusamus omnis.', '(395)567-9346x44955', 'maverick81@example.org', 100);
-
-
-#
-# TABLE STRUCTURE FOR: person
-#
-
-DROP TABLE IF EXISTS `person`;
-
 CREATE TABLE `person` (
-  `id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `tripId` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `firstname` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `lastname` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `phone` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `IDNumber` int(11) NOT NULL,
-  `email` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `willTravel` tinyint(4) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`),
-  KEY `FK_9b53a69c297420a377dae12e437` (`tripId`),
-  CONSTRAINT `FK_9b53a69c297420a377dae12e437` FOREIGN KEY (`tripId`) REFERENCES `trip` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+  `id` varchar(255) NOT NULL
+,  `tripId` varchar(255) DEFAULT NULL
+,  `firstname` varchar(255) NOT NULL
+,  `lastname` varchar(255) NOT NULL
+,  `phone` varchar(255) NOT NULL
+,  `IDNumber` integer NOT NULL
+,  `email` varchar(255) DEFAULT NULL
+,  `willTravel` integer NOT NULL DEFAULT 0
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `FK_9b53a69c297420a377dae12e437` FOREIGN KEY (`tripId`) REFERENCES `trip` (`id`)
+);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('015c5549-3bbb-31ef-b2d5-402c6a9f746e', '30057c8c-7772-3ae0-b423-661e7b10d26b', 'Gudrun', 'Hodkiewicz', '+27(7)4217166816', 764280, 'gibson.rodrigo@example.org', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('04f6f603-4eac-395c-a310-98b7cf7c19ce', 'fab2bdb7-de25-3ef2-9711-6c995ba230e8', 'Nick', 'Hudson', '480-472-8973x736', 537845, 'carolanne.rowe@example.net', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('0ac3fd9c-7f37-320c-9c91-d69829b3f2cd', 'd2d016c1-7fc9-3120-aeb0-82c6d96b9917', 'Randall', 'Rau', '005.772.5432x606', 614833, 'hagenes.jakayla@example.net', 1);
@@ -154,7 +139,7 @@ INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumbe
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('3eb27377-0545-3319-b64d-d761178ec6fe', 'c7874b73-c506-3405-8b8b-32da6ce19340', 'Verna', 'Kautzer', '02151755487', 940013, 'johann17@example.net', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('40ca65b3-c6b6-38ec-aaa7-571d8e59e508', 'cb99f406-2fa0-3496-8f52-bf93f53754c3', 'Silas', 'Corwin', '843.846.9827x7893', 297970, 'everardo19@example.org', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('42a0cc25-16ea-359c-a46f-399f443a4b10', '2528a3fd-f504-3170-b0f3-cadc989e42c4', 'Viviane', 'Conroy', '655-367-7928', 599168, 'macie.bogan@example.org', 1);
-INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('42d7ca55-4bf3-33cc-98bc-9d704c1d2a99', '4abc6694-a037-3506-8e30-356b32110d07', 'Dallas', 'Smitham', '191-512-0407x012', 189457, 'o\'conner.candida@example.net', 0);
+INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('42d7ca55-4bf3-33cc-98bc-9d704c1d2a99', '4abc6694-a037-3506-8e30-356b32110d07', 'Dallas', 'Smitham', '191-512-0407x012', 189457, 'o''conner.candida@example.net', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('433747c0-e6fc-3ef7-a787-2aab5ee31366', '567f8560-3f44-3f8d-8d52-d9c6ffd5d2ac', 'Ernestine', 'Sanford', '997-611-6934x45603', 255154, 'qpredovic@example.net', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('435fb097-b0d6-3138-a346-dd935d176409', 'cde4f888-c94c-370d-8017-abbf1130db1b', 'Ceasar', 'Hartmann', '(727)023-3369', 763191, 'gdaugherty@example.org', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('47e1631a-daa4-3678-9637-f842a2aa0a0f', 'fdb06532-0d03-31ce-9fb5-84675715f204', 'Lavina', 'Johns', '+65(9)7677954239', 598760, 'jeromy31@example.org', 1);
@@ -167,7 +152,7 @@ INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumbe
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('62aad3c7-1c13-3a9f-a8f0-e33ca32abb4f', '71bbf8a0-7a66-30f4-b9b5-15da9c7ffa63', 'Berneice', 'Quitzon', '771.465.9264x2269', 889268, 'boehm.abagail@example.org', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('62d26e0d-1805-36e2-bfea-ba927d1b2476', '35d4aa95-3153-3d1b-b144-0f7b2eda0192', 'Antonia', 'Gibson', '495.209.2779', 553891, 'harmony04@example.com', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('67212653-8f59-3d14-a5bd-343346c4100c', 'cd2b73e3-2bd7-330d-a925-f5bfaf3d3335', 'Bennett', 'Shanahan', '(399)331-9726x0233', 578726, 'hschulist@example.org', 1);
-INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('67d2d442-05d1-388b-a5a0-acad63f81e19', '8d3482dd-73ad-3135-9ebc-3195960bc722', 'Cedrick', 'Zieme', '1-860-023-5963x11024', 552346, 'o\'keefe.nina@example.com', 1);
+INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('67d2d442-05d1-388b-a5a0-acad63f81e19', '8d3482dd-73ad-3135-9ebc-3195960bc722', 'Cedrick', 'Zieme', '1-860-023-5963x11024', 552346, 'o''keefe.nina@example.com', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('6e17f3fd-e1fe-3633-862e-128f3711f9be', 'fb2042b3-39b5-39b2-9a80-20c957ee9d82', 'Rosina', 'Hamill', '1-657-157-2242x3105', 743978, 'antoinette.senger@example.com', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('6e9bcd19-0830-3f15-8353-540e4b30bc00', '6f186e6e-44a9-3a11-93df-67e0758bdb31', 'Willis', 'Mayer', '472-726-5512', 232577, 'kali03@example.com', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('7c41de36-5776-34c0-82d9-08d58fa6182e', 'fd7d6b83-985b-3e9f-91d3-01293ee09291', 'Adalberto', 'Hahn', '458-757-2552', 755040, 'leopoldo.blick@example.com', 0);
@@ -206,7 +191,7 @@ INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumbe
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ca7797d7-8715-36cf-b112-34090f3b877b', '94a48af1-e87c-33c5-bf39-168a9e782c66', 'Lela', 'Frami', '521-647-3107x3044', 708699, 'dsipes@example.org', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('cb4b3181-b868-3e9a-a4e2-44f0dea2afe3', 'fcb271b4-f8b5-3792-b90b-bc26ed9c2198', 'Meda', 'Spencer', '780.318.1592', 849607, 'dwilderman@example.org', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('cbdaf2c4-21ce-3285-b6bf-296e1b8ff992', 'b82fef20-56c9-347a-9dae-448e1056b468', 'Javon', 'Simonis', '1-953-438-7093', 967221, 'zoey82@example.com', 0);
-INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('cbf70c14-b481-3eff-8fa9-5c450f4e884d', 'e028aed8-e94c-374f-b466-d4e2f7bf1e0f', 'Sister', 'O\'Reilly', '200-962-3004x46526', 268158, 'michelle61@example.org', 1);
+INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('cbf70c14-b481-3eff-8fa9-5c450f4e884d', 'e028aed8-e94c-374f-b466-d4e2f7bf1e0f', 'Sister', 'O''Reilly', '200-962-3004x46526', 268158, 'michelle61@example.org', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ce2463f3-d38d-3968-8a01-0251346baa20', 'dfc1869b-a466-3223-b26c-888988f297ed', 'Rene', 'Harris', '812-632-9051x455', 302748, 'awilliamson@example.org', 0);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ce9f02a6-ad4b-3f35-9f17-389e921c2694', '25a54615-fce7-3076-9efe-fa8b6f8c6f13', 'Luis', 'Huels', '+01(2)1854527603', 313813, 'orosenbaum@example.org', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('d0784c9d-1deb-323b-9cfe-8491dac1b1d9', '43f61360-e3fd-31d2-95fe-a270c4a27c89', 'Ludwig', 'Bogisich', '425-522-0169x8205', 747781, 'bernardo87@example.net', 0);
@@ -234,24 +219,14 @@ INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumbe
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ff09f073-6e97-35ed-884f-38da2408f01b', '73027a8a-003b-3867-9c26-790cd0e072b6', 'Salvatore', 'Cassin', '066-485-4103x69956', 656376, 'nschuster@example.com', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ff1c0e40-91ed-3e06-8fa6-ce0da1acf3d2', '05c04d6b-ddf3-371b-b71d-c84827530f35', 'Camron', 'Lowe', '(760)216-0037x02659', 530774, 'celestino.walker@example.net', 1);
 INSERT INTO `person` (`id`, `tripId`, `firstname`, `lastname`, `phone`, `IDNumber`, `email`, `willTravel`) VALUES ('ff857324-4c2f-3333-95e5-b2144df82791', '9f7be9f7-ed73-378f-8204-2747fb6d8f8b', 'Lloyd', 'Huel', '1-442-241-7679', 492330, 'hagenes.mable@example.net', 0);
-
-
-#
-# TABLE STRUCTURE FOR: trip
-#
-
-DROP TABLE IF EXISTS `trip`;
-
 CREATE TABLE `trip` (
-  `id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `departureDate` datetime NOT NULL,
-  `estimatedArrivalDate` datetime DEFAULT NULL,
-  `agencyId` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FK_a747b50b9a8fd33dfa70aefc775` (`agencyId`),
-  CONSTRAINT `FK_a747b50b9a8fd33dfa70aefc775` FOREIGN KEY (`agencyId`) REFERENCES `agency` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+  `id` varchar(255) NOT NULL
+,  `departureDate` datetime NOT NULL
+,  `estimatedArrivalDate` datetime DEFAULT NULL
+,  `agencyId` integer NOT NULL
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `FK_a747b50b9a8fd33dfa70aefc775` FOREIGN KEY (`agencyId`) REFERENCES `agency` (`id`)
+);
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('01af2c30-af69-3118-9ee1-9eae0a4df259', '2012-09-05 09:47:07', '1987-05-05 11:05:35', 72);
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('05c04d6b-ddf3-371b-b71d-c84827530f35', '2001-10-13 13:29:40', '2009-07-29 06:50:13', 78);
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('0e0079ce-48c2-3d6c-9cea-27b7b998a2f6', '2005-03-31 21:29:34', '2004-07-12 13:11:22', 38);
@@ -352,5 +327,6 @@ INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) V
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('fd7d6b83-985b-3e9f-91d3-01293ee09291', '1994-09-18 16:16:17', '2001-05-15 07:36:49', 26);
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('fdb06532-0d03-31ce-9fb5-84675715f204', '2008-12-30 16:42:00', '1993-12-26 08:23:58', 5);
 INSERT INTO `trip` (`id`, `departureDate`, `estimatedArrivalDate`, `agencyId`) VALUES ('fea12f6b-3e43-3bb7-b3cf-594c1d790953', '1984-03-27 09:34:36', '1993-09-12 23:40:45', 100);
-
-
+CREATE INDEX "idx_person_FK_9b53a69c297420a377dae12e437" ON "person" (`tripId`);
+CREATE INDEX "idx_trip_FK_a747b50b9a8fd33dfa70aefc775" ON "trip" (`agencyId`);
+END TRANSACTION;

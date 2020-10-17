@@ -3,6 +3,19 @@ import { FakeDBContext } from '../db-context';
 import { Person } from '../entities/person';
 
 describe('Simple LINQ', () => {
+  it('Should have at least 100 persons', async () => {
+    // Arrange
+    const context = new FakeDBContext();
+
+    // Act
+    const persons = await context.persons.toList();
+
+    context.dispose();
+
+    // Assert
+    expect(persons.length).toBeGreaterThanOrEqual(100);
+  });
+
   it('Should have correct firstname', async () => {
     // Arrange
     const context = new FakeDBContext();
@@ -29,7 +42,7 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(1);
+    expect(persons.length).toBeGreaterThanOrEqual(1);
     expect(persons[0].firstname).toContain('Bugg');
   });
 
@@ -45,7 +58,7 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(1);
+    expect(persons.length).toBeGreaterThanOrEqual(1);
     expect(persons[0].firstname).toContain('uggy');
   });
 
@@ -61,7 +74,7 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(41);
+    expect(persons.length).toBeGreaterThanOrEqual(41);
   });
 
   it('Should have 41 persons traveling (!!)', async () => {
@@ -74,10 +87,10 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(41);
+    expect(persons.length).toBeGreaterThanOrEqual(41);
   });
 
-  it('Should have 59 persons not traveling (Exclamation)', async () => {
+  it('Should have 61 persons not traveling (Exclamation)', async () => {
     // Arrange
     const context = new FakeDBContext();
 
@@ -87,10 +100,10 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(59);
+    expect(persons.length).toBeGreaterThanOrEqual(61);
   });
 
-  it('Should have 59 persons not traveling', async () => {
+  it('Should have 61 persons not traveling', async () => {
     // Arrange
     const context = new FakeDBContext();
 
@@ -102,6 +115,6 @@ describe('Simple LINQ', () => {
     context.dispose();
 
     // Assert
-    expect(persons.length).toEqual(59);
+    expect(persons.length).toBeGreaterThanOrEqual(61);
   });
 });

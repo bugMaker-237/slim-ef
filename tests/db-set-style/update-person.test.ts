@@ -16,32 +16,16 @@ describe('Add person', () => {
       IDNumber: 7985631
     };
     // Act
-    context.persons.attach(person);
+    context.persons.update(person);
     await context.saveChanges();
-    dbPerson = await context.persons.first((p, $) => p.id === $.id, { id: dbPerson.id });
+    dbPerson = await context.persons.first((p, $) => p.id === $.id, {
+      id: dbPerson.id
+    });
     context.dispose();
 
     // Assert
     expect(person.id).toBe(dbPerson.id);
     expect(person.firstname).toBe(dbPerson.firstname);
     expect(person.lastname).toBe(dbPerson.lastname);
-  });
-
-  it('Should add person :: style 2', async () => {
-    // Arrange
-    const context = new FakeDBContext();
-    // Act
-    context.persons.add({
-      firstname: 'Another Buggy',
-      lastname: 'Maker 2',
-      IDNumber: 987654321,
-      phone: '+237677788852'
-    });
-    const { added } = await context.saveChanges();
-    context.dispose();
-
-    // Assert
-    expect(added[0].id).toBeDefined();
-    expect(added[0].firstname).toBe('Another Buggy');
   });
 });

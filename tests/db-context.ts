@@ -1,4 +1,6 @@
+import { resolve } from 'path';
 import { Connection } from 'typeorm';
+import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
 import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 import {
   DbContext,
@@ -18,12 +20,28 @@ export class FakeDBContext extends DbContext {
     super(
       new Connection({
         type: 'sqlite',
-        database: ':memory:',
+        database: resolve(__dirname, 'seeder', 'slim_ef_test.db'),
         entities: [Person, Agency, Trip],
-        synchronize: true
+        synchronize: false
       } as SqliteConnectionOptions),
       SQLQuerySpecificationEvaluator
     );
+    /**
+     * MySql Connection
+     */
+    // super(
+    //   new Connection({
+    //     type: 'mysql',
+    //     host: 'localhost',
+    //     port: 3306,
+    //     username: 'admin',
+    //     password: 'admin0000',
+    //     database: 'slim_ef_test',
+    //     entities: [Person, Agency, Trip],
+    //     synchronize: true
+    //   } as MysqlConnectionOptions),
+    //   SQLQuerySpecificationEvaluator
+    // );
   }
 
   protected onModelCreation<BaseType extends object = any>(
