@@ -71,13 +71,11 @@ describe('Logical LINQ', () => {
   it('Should have 35 trips with departureDate and arrivalDate as specified', async () => {
     // init
     const context = new FakeDBContext();
-    const data: {
-      departureDate: Date;
-      estimatedArrivalDate: Date;
-    } = {
+    const data = {
       departureDate: new Date(2000, 1, 1),
       estimatedArrivalDate: new Date(2016, 1, 1)
     };
+
     // getting the data
     const trips = await context.trips
       .include(t => t.passengers)

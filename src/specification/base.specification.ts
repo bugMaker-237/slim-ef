@@ -146,14 +146,6 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   protected applySelector(selector: FieldsSelector<T>) {
     if (selector) this._selector = selector;
   }
-  protected applyExpressionSelectors(
-    ...selectors: SlimExpressionFunction<T>[]
-  ) {
-    if (selectors)
-      this._selector = {
-        fieldsToSelect: selectors
-      };
-  }
   protected applyOrderBy(orderBy: SlimExpressionFunction<T>) {
     this._orderBy = orderBy;
   }

@@ -13,12 +13,17 @@ import {
   QueryInitializer,
   IDbContextOptionsBuilder
 } from './interfaces';
+import { getMetaData } from './metadata';
 import { DbContextModelBuilder } from './model-builder';
 import { DbContextOptionsBuilder } from './options-builder';
-import { IInternalDbContext } from './_internal.interface';
+import {
+  IInternalDbContext,
+  ProxyMetaDataInstance
+} from './_internal.interface';
 interface IEntity {
   id?: any;
 }
+
 export abstract class DbContext implements IDbContext, IInternalDbContext {
   private _entitySets: WeakMap<any, Repository<any>>;
   private _new: IEntity[] = [];
@@ -130,6 +135,11 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     }
   }
 
+  public async query(query: string, parameters: any[]): Promise<any> {
+    return this._connection.query(query, parameters);
+  }
+
+  //#region IInternalDbContext Implementation
   public async execute<T extends object, R = T[]>(
     queryable: IInternalDbSet<T>,
     type: QueryType = QueryType.ALL,
@@ -151,19 +161,24 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
       queryable.asSpecification()
     );
     const logger = this._optionsBuilder.createLogger('query');
-    logger?.log('info', specEval.getQuery());
+    logger?.log('info', await specEval.getQuery());
     return await specEval.executeQuery(type);
   }
 
-  public async query(query: string, parameters: any[]): Promise<any> {
-    return this._connection.query(query, parameters);
+  public async getMetadata<T>(
+    type: new (...args: any[]) => T
+  ): Promise<ProxyMetaDataInstance<T>> {
+    await this._tryOpenConnection();
+    return getMetaData(this._connection, type);
   }
 
+  //#endregion
   public dispose(): void {
     this._dispose();
     this._connection.close();
   }
 
+  //#region Private methods
   private async _tryOpenConnection() {
     if (!this._connection.isConnected) await this._connection.connect();
   }
@@ -259,4 +274,9 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
 
     return repo;
   }
+  //#endregion
 }
+
+// tslint:disable-next-line: max-classes-per-file
+export abstract class UnitOfWork extends DbContext
+  implements Omit<Omit<DbContext, 'execute'>, 'getMetadata'> {}

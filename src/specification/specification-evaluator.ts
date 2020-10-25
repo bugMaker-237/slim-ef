@@ -3,7 +3,8 @@ import {
   CriteriaExpression,
   IQuerySpecificationEvaluator,
   QueryType,
-  FunctionQueryType
+  FunctionQueryType,
+  FieldsSelector
 } from './specification.interface';
 import {
   SelectQueryBuilder,
@@ -49,12 +50,13 @@ type QuerySequence<T> = {
   initialToApply: WhereQuery<T>;
 };
 
-export class SQLQuerySpecificationEvaluator<T>
+export class SQLQuerySpecificationEvaluator<T extends object>
   implements IQuerySpecificationEvaluator<T> {
   private registerdAliases = [INITIAL_ALIAS];
   private _query: SelectQueryBuilder<T>;
   private _queryReady: boolean;
   private _discriminator: number = 0;
+  private _selectBuilder: SlimExpressionFunction<T, any, any>;
 
   constructor(
     private readonly initialQuery: (alias: string) => SelectQueryBuilder<T>,
@@ -63,7 +65,9 @@ export class SQLQuerySpecificationEvaluator<T>
     this._queryReady = false;
   }
 
-  private _applyLeftJoin(
+  private;
+
+  _applyLeftJoin(
     query: SelectQueryBuilder<T>,
     intialAlias: string,
     exp: SlimExpressionFunction<T> | string
@@ -109,8 +113,8 @@ export class SQLQuerySpecificationEvaluator<T>
     };
   }
 
-  private _getPropertyAlias(f: SlimExpressionFunction<T, any, any>) {
-    const name = SlimExpression.nameOf(f);
+  private _getPropertyAlias(f: SlimExpressionFunction<T, any, any> | string) {
+    const name = typeof f === 'string' ? f : SlimExpression.nameOf(f);
     if (!name.trim())
       throw new SQLQuerySpecificationException(
         'You are trying to apply boolean condition on self entity'
@@ -436,107 +440,146 @@ export class SQLQuerySpecificationEvaluator<T>
     return paramName + '_' + ++this._discriminator;
   }
 
-  public getQuery(): string {
-    try {
-      this._query = this.initialQuery(INITIAL_ALIAS).select();
-      // tslint:disable-next-line: one-variable-per-declaration
-      const includes = this.spec.getIncludes(),
-        chainedIncludes = this.spec.getChainedIncludes(),
-        criterias = this.spec.getCriterias(),
-        orderBy = this.spec.getOrderBy(),
-        orderByDescending = this.spec.getOrderByDescending(),
-        selector = this.spec.getSelector(),
-        take = this.spec.getTake(),
-        skip = this.spec.getSkip(),
-        thenBy = this.spec.getThenBy(),
-        isPagingEnabled = this.spec.getIsPagingEnabled(),
-        func = this.spec.getFunction();
+  public getQuery<R extends object>(): Promise<string> {
+    return new Promise((res, rej) => {
+      try {
+        this._query = this.initialQuery(INITIAL_ALIAS).select();
+        // tslint:disable-next-line: one-variable-per-declaration
+        const includes = this.spec.getIncludes(),
+          chainedIncludes = this.spec.getChainedIncludes(),
+          criterias = this.spec.getCriterias(),
+          orderBy = this.spec.getOrderBy(),
+          orderByDescending = this.spec.getOrderByDescending(),
+          selector = this.spec.getSelector<R>(),
+          take = this.spec.getTake(),
+          skip = this.spec.getSkip(),
+          thenBy = this.spec.getThenBy(),
+          isPagingEnabled = this.spec.getIsPagingEnabled(),
+          func = this.spec.getFunction();
 
-      if (chainedIncludes && chainedIncludes.length > 0) {
-        for (const i of chainedIncludes) {
-          let { entityAlias: currentAlias } = this._applyLeftJoin(
-            this._query,
-            INITIAL_ALIAS,
-            i.initial
-          );
-          i.chain.forEach(c => {
-            const { entityAlias } = this._applyLeftJoin(
+        if (chainedIncludes && chainedIncludes.length > 0) {
+          for (const i of chainedIncludes) {
+            let { entityAlias: currentAlias } = this._applyLeftJoin(
               this._query,
-              currentAlias,
-              c
+              INITIAL_ALIAS,
+              i.initial
             );
-            currentAlias = entityAlias;
-          });
+            i.chain.forEach(c => {
+              const { entityAlias } = this._applyLeftJoin(
+                this._query,
+                currentAlias,
+                c
+              );
+              currentAlias = entityAlias;
+            });
+          }
         }
-      }
 
-      if (includes && includes.length > 0) {
-        for (const i of includes) {
-          this._applyLeftJoin(this._query, INITIAL_ALIAS, i);
+        if (includes && includes.length > 0) {
+          for (const i of includes) {
+            this._applyLeftJoin(this._query, INITIAL_ALIAS, i);
+          }
         }
+
+        if (criterias && criterias.length > 0) {
+          const [first, ...rest] = criterias;
+
+          this._query = this._generateQuery(
+            INITIAL_ALIAS,
+            this._query,
+            first,
+            true
+          );
+          if (rest && rest.length > 0) {
+            for (const q of rest) {
+              this._query = this._generateQuery(INITIAL_ALIAS, this._query, q);
+            }
+          }
+        }
+
+        if (func) {
+          this._query = this._applyFunction(this._query, func);
+        } else {
+          let propertyAlias;
+          let isAsc = false;
+          if (orderBy) {
+            propertyAlias = this._getPropertyAlias(orderBy);
+            isAsc = true;
+            this._query = this._query.orderBy(propertyAlias, 'ASC');
+          } else if (orderByDescending) {
+            propertyAlias = this._getPropertyAlias(orderByDescending);
+            this._query = this._query.orderBy(propertyAlias, 'DESC');
+          }
+
+          if (thenBy) {
+            propertyAlias = this._getPropertyAlias(thenBy);
+            this._query = this._query.addOrderBy(
+              propertyAlias,
+              isAsc ? 'ASC' : 'DESC'
+            );
+          }
+
+          if (isPagingEnabled) {
+            if (take) {
+              this._query = this._query.take(take);
+            }
+            if (skip) {
+              this._query = this._query.skip(skip);
+            }
+          }
+
+          if (
+            selector &&
+            selector.fieldsToSelect &&
+            selector.fieldsToSelect.length > 0
+          ) {
+            const toSelect = this._buildSelect(this._query, selector);
+            this._query.select(toSelect);
+            this._selectBuilder = selector.builder;
+          }
+        }
+        this._queryReady = true;
+        return res(this._query.getQuery());
+      } catch (error) {
+        throw new SQLQuerySpecificationException(error);
       }
+    });
+  }
+  private _buildSelect(
+    _query: SelectQueryBuilder<T>,
+    selector: FieldsSelector<T>
+  ): string[] {
+    const toSelect = [
+      ...selector.fieldsToSelect.map(f => this._getPropertyAlias(f.field))
+    ];
 
-      if (criterias && criterias.length > 0) {
-        const [first, ...rest] = criterias;
+    // If id is not present typeorm throws an exception.
+    // So we go get the id field
 
-        this._query = this._generateQuery(
-          INITIAL_ALIAS,
-          this._query,
-          first,
-          true
+    for (const c of this._query.expressionMap.mainAlias.metadata.columns) {
+      if (c.isPrimary) {
+        toSelect.push(
+          this._getFieldFromRegisteredAlias(INITIAL_ALIAS, c.propertyName)
         );
-        if (rest && rest.length > 0) {
-          for (const q of rest) {
-            this._query = this._generateQuery(INITIAL_ALIAS, this._query, q);
-          }
-        }
+        break;
       }
-      if (func) {
-        this._query = this._applyFunction(this._query, func);
-      } else {
-        let propertyAlias;
-        let isAsc = false;
-        if (orderBy) {
-          propertyAlias = this._getPropertyAlias(orderBy);
-          isAsc = true;
-          this._query = this._query.orderBy(propertyAlias, 'ASC');
-        } else if (orderByDescending) {
-          propertyAlias = this._getPropertyAlias(orderByDescending);
-          this._query = this._query.orderBy(propertyAlias, 'DESC');
-        }
-
-        if (thenBy) {
-          propertyAlias = this._getPropertyAlias(thenBy);
-          this._query = this._query.addOrderBy(
-            propertyAlias,
-            isAsc ? 'ASC' : 'DESC'
-          );
-        }
-
-        if (isPagingEnabled) {
-          if (take) {
-            this._query = this._query.take(take);
-          }
-          if (skip) {
-            this._query = this._query.skip(skip);
-          }
-        }
-
-        if (
-          selector &&
-          selector.fieldsToSelect &&
-          selector.fieldsToSelect.length > 0
-        ) {
-          this._query.select(
-            selector.fieldsToSelect.map(f => this._getPropertyAlias(f))
-          );
-        }
-      }
-      this._queryReady = true;
-      return this._query.getQuery();
-    } catch (error) {
-      throw new SQLQuerySpecificationException(error);
     }
+
+    // I didn't find any other way to add the realtionsId to
+    // the select query.
+    // If the relations' id are not present in the select query
+    // the entities will not be loaded by typeorm
+    for (const j of this._query.expressionMap.joinAttributes) {
+      const propName = j.alias.name.split('_');
+      propName.pop();
+      const finalName = propName.join('_');
+      for (const f of j.relation.foreignKeys) {
+        for (const c of f.columnNames) {
+          toSelect.push(this._getFieldFromRegisteredAlias(finalName, c));
+        }
+      }
+    }
+    return toSelect;
   }
   private _applyFunction(
     query: SelectQueryBuilder<T>,
@@ -549,32 +592,46 @@ export class SQLQuerySpecificationEvaluator<T>
     return query.select(`${value.type}(${field}) as ${value.type}`);
   }
 
-  public async executeQuery<R = T[]>(type: QueryType): Promise<R> {
-    if (!this._queryReady) this.getQuery();
-    let toApply;
-    let defaultVal;
-    switch (type) {
-      case QueryType.ALL:
-        toApply = this._query.getMany;
-        defaultVal = [];
-        break;
-      case QueryType.ONE:
-        toApply = this._query.getOne;
-        defaultVal = {};
-        break;
-      case QueryType.RAW_ONE:
-        toApply = this._query.getRawOne;
-        defaultVal = {};
-        break;
-      case QueryType.RAW_ALL:
-        toApply = this._query.getRawMany;
-        defaultVal = [];
-        break;
+  public async executeQuery<R extends object = T, Q = R[]>(
+    type: QueryType
+  ): Promise<Q> {
+    try {
+      if (!this._queryReady) await this.getQuery<R>();
+      let toApply;
+      let defaultVal;
+      switch (type) {
+        case QueryType.ALL:
+          toApply = this._query.getMany;
+          defaultVal = [];
+          break;
+        case QueryType.ONE:
+          toApply = this._query.getOne;
+          defaultVal = void 0;
+          break;
+        case QueryType.RAW_ONE:
+          toApply = this._query.getRawOne;
+          defaultVal = void 0;
+          break;
+        case QueryType.RAW_ALL:
+          toApply = this._query.getRawMany;
+          defaultVal = [];
+          break;
 
-      default:
-        break;
+        default:
+          break;
+      }
+      const result = (await toApply.call(this._query)) || defaultVal;
+      let finalRes: any;
+      if (this._selectBuilder) {
+        finalRes = Array.isArray(result)
+          ? result.map(r => this._selectBuilder(r))
+          : this._selectBuilder(result);
+      } else {
+        finalRes = result;
+      }
+      return finalRes;
+    } catch (error) {
+      throw error;
     }
-    const result = (await toApply.call(this._query)) || defaultVal;
-    return result;
   }
 }

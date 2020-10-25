@@ -11,8 +11,10 @@ import { DeepPartial } from 'typeorm';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
 import { EmptySetException } from './exception';
-import { timeStamp } from 'console';
-import { IInternalDbContext } from '../uow/_internal.interface';
+import {
+  IInternalDbContext,
+  ProxyMetaDataInstance
+} from '../uow/_internal.interface';
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
@@ -21,11 +23,13 @@ export class DbSet<
   R extends T = any,
   E = DeepPartial<T>
 > extends BaseSpecification<T> implements IDbSet<T, R, E> {
+  private _queryTypeToExecute = QueryType.ALL;
   private _lastInclude: SlimExpressionFunction<T>;
   private _currentSkip: number;
   private _currentTake: number;
   private _ignoreFilters: boolean;
   private _underlyingType: new (...args) => T;
+  private _onGoingPromise: Promise<boolean>;
 
   constructor(context: IDbContext | IUnitOfWork);
   constructor(public context: (IDbContext | IUnitOfWork) & IInternalDbContext) {
@@ -135,22 +139,52 @@ export class DbSet<
     this._currentSkip = count;
     return this;
   }
-  select(
-    selector: SlimExpressionFunction<T>,
-    ...selectors: SlimExpressionFunction<T>[]
-  ): this;
-  select(selector: FieldsSelector<T>): this;
-  select(
-    selector: FieldsSelector<T> | SlimExpressionFunction<T>,
-    ...selectors: SlimExpressionFunction<T>[]
-  ) {
-    if (selectors && selectors.length > 0)
-      this.applySelector(selector as FieldsSelector<T>);
-    else {
-      const sels = [selector as SlimExpressionFunction<T>, ...selectors];
-      this.applyExpressionSelectors(...sels);
+
+  select<V extends object>(func: SlimExpressionFunction<T, V>) {
+    const thisType = this[UnderlyingType];
+    this._onGoingPromise = this.context
+      .getMetadata(thisType)
+      .then(proxyInstance => {
+        const res = func(proxyInstance as T) as ProxyMetaDataInstance<V>;
+        const fieldsToSelect = this._extractKeyFields<V>(res);
+        const selector: FieldsSelector<T> = {
+          builder: func,
+          fieldsToSelect
+        };
+        this.applySelector(selector);
+        return true;
+      })
+      .catch(rej => {
+        throw new Error(rej);
+      });
+
+    return this as any;
+  }
+
+  private _extractKeyFields<V extends object>(
+    res: ProxyMetaDataInstance<V>
+  ): {
+    field: string;
+  }[] {
+    const fieldsToSelect = [];
+    for (const k in res) {
+      if (Object.prototype.hasOwnProperty.call(res, k)) {
+        const element = res[k];
+        if (!Array.isArray(element)) {
+          fieldsToSelect.push({
+            field: element.$$propertyName
+          });
+        } else {
+          const arrElt = element[0];
+          fieldsToSelect.push(
+            ...this._extractKeyFields(arrElt).map(e => ({
+              field: `${e.field}`
+            }))
+          );
+        }
+      }
     }
-    return this;
+    return fieldsToSelect;
   }
 
   async count<C extends object>(
@@ -209,7 +243,7 @@ export class DbSet<
     return this;
   }
 
-  IgnoreQueryFilters(): this {
+  ignoreQueryFilters(): this {
     this._ignoreFilters = true;
     return this;
   }
@@ -224,17 +258,19 @@ export class DbSet<
   }
 
   async toList(): Promise<T[]> {
-    return await this.execute(QueryType.ALL);
+    return await this.execute(this._queryTypeToExecute);
   }
 
   private async execute<TResult>(type: QueryType): Promise<TResult> {
-    const res = (await this.context.execute(
-      this,
-      type,
-      this._ignoreFilters
-    )) as TResult;
-    this.clearSpecs();
-    return res;
+    if (!this._onGoingPromise || (await this._onGoingPromise)) {
+      const res = (await this.context.execute(
+        this,
+        type,
+        this._ignoreFilters
+      )) as TResult;
+      this.clearSpecs();
+      return res;
+    }
   }
 
   then<TResult1 = T[], TResult2 = never>(

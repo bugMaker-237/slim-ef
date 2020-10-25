@@ -10,9 +10,12 @@ export interface CriteriaExpression<
   context?: C;
 }
 
-export interface FieldsSelector<T> {
-  fieldsToSelect?: SlimExpressionFunction<T>[];
-  builder?: SlimExpressionFunction<T>;
+export interface FieldsSelector<T, R extends object = any> {
+  fieldsToSelect?: {
+    field: string;
+    // alias: string;
+  }[];
+  builder?: SlimExpressionFunction<T, any, any>;
 }
 
 export interface ISpecification<T = undefined> {
@@ -33,7 +36,7 @@ export interface ISpecification<T = undefined> {
   getTake(): number;
   getSkip(): number;
   getIsPagingEnabled(): boolean;
-  getSelector(): FieldsSelector<T>;
+  getSelector<R extends object = any>(): FieldsSelector<T, R>;
 }
 export enum QueryType {
   ONE,
@@ -46,11 +49,12 @@ export type QuerySpecificationEvaluatorConstructor<T = any> = new (
   initialQuery: (alias: string) => SelectQueryBuilder<T>,
   spec: ISpecification<T>
 ) => IQuerySpecificationEvaluator<T>;
+
 export declare class IQuerySpecificationEvaluator<T = any> {
   constructor(
     initialQuery: (alias: string) => SelectQueryBuilder<T>,
     spec: ISpecification<T>
   );
-  executeQuery<R = T[]>(type: QueryType): Promise<R>;
+  executeQuery<R = T, Q = R[]>(type: QueryType): Promise<Q>;
   getQuery(): Promise<string> | string;
 }

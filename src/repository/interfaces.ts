@@ -10,33 +10,34 @@ export type ExpressionResult = object | PrimitiveType;
 
 export type PrimitiveType = string | number | boolean;
 
-export interface IQueryable<
-  T extends object,
-  P extends ExpressionResult = any
-> {
-  first(): Promise<T>;
+interface IQueryableSelectionResult<V extends object, T extends object = any> {
+  first(): Promise<V>;
   first<C extends object>(
     func: SlimExpressionFunction<T, boolean, C>,
     context?: C
-  ): Promise<T>;
-  firstOrDefault(): Promise<T>;
+  ): Promise<V>;
+  firstOrDefault(): Promise<V>;
   firstOrDefault<C extends object>(
     func: SlimExpressionFunction<T, boolean, C>,
     context?: C
-  ): Promise<T>;
-  toList(): Promise<T[]>;
+  ): Promise<V>;
+  toList(): Promise<V[]>;
+}
+
+export interface IQueryable<T extends object, P extends ExpressionResult = any>
+  extends IQueryableSelectionResult<T> {
   include<S extends object>(
     includes: SlimExpressionFunction<T, S>
-  ): IQueryable<T, S> & this;
+  ): IQueryable<T, S> & IQueryable<T, P>;
   thenInclude<S extends object>(
     includes: SlimExpressionFunction<P, S>
-  ): IQueryable<T, S> & this;
+  ): IQueryable<T, S> & IQueryable<T, P>;
   where<C extends object>(
     func: SlimExpressionFunction<T, boolean, C>,
     context?: C
-  ): this;
-  take(count: number): this;
-  skip(count: number): this;
+  ): IQueryable<T, P>;
+  take(count: number): IQueryable<T, P>;
+  skip(count: number): IQueryable<T, P>;
   sum(field: SlimExpressionFunction<T, number>): Promise<number>;
   average(field: SlimExpressionFunction<T, number>): Promise<number>;
   count<C extends object>(
@@ -48,16 +49,13 @@ export interface IQueryable<
   min<R extends ExpressionResult>(
     field: SlimExpressionFunction<T, R>
   ): Promise<R>;
-  select<R extends ExpressionResult>(
-    field: SlimExpressionFunction<T, R>
-  ): Promise<R>;
-  select(
-    selector: SlimExpressionFunction<T>,
-    ...selectors: SlimExpressionFunction<T>[]
-  ): this;
-  orderBy(orderBy: SlimExpressionFunction<T>): this;
-  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>): this;
-  orderByDescending(orderBy: SlimExpressionFunction<T>): this;
+  select<V extends object>(
+    func: SlimExpressionFunction<T, V>
+  ): IQueryableSelectionResult<V, T>;
+  ignoreQueryFilters(): IQueryable<T, P>;
+  orderBy(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+  orderByDescending(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
 }
 
 export declare class IDbSet<
@@ -79,16 +77,16 @@ export declare class IDbSet<
   toList(): Promise<T[]>;
   include<S extends object>(
     includes: SlimExpressionFunction<T, S, any>
-  ): IQueryable<T, S> & this;
+  ): IQueryable<T, S> & IQueryable<T, P>;
   thenInclude<S extends object>(
     includes: SlimExpressionFunction<P, S, any>
-  ): IQueryable<T, S> & this;
+  ): IQueryable<T, S> & IQueryable<T, P>;
   where<C extends object>(
     func: SlimExpressionFunction<T, boolean, C>,
     context?: C
-  ): this;
-  take(count: number): this;
-  skip(count: number): this;
+  ): IQueryable<T, P>;
+  take(count: number): IQueryable<T, P>;
+  skip(count: number): IQueryable<T, P>;
   sum(field: SlimExpressionFunction<T, number, any>): Promise<number>;
   average(field: SlimExpressionFunction<T, number, any>): Promise<number>;
   count<C extends object>(
@@ -100,20 +98,22 @@ export declare class IDbSet<
   min<R extends ExpressionResult>(
     field: SlimExpressionFunction<T, R, any>
   ): Promise<R>;
-  select<R extends ExpressionResult>(
-    field: SlimExpressionFunction<T, R, any>
-  ): Promise<R>;
-  select(
-    selector: SlimExpressionFunction<T, any, any>,
-    ...selectors: SlimExpressionFunction<T, any, any>[]
-  ): this;
-  orderBy(orderBy: SlimExpressionFunction<T, any, any>): this;
-  thenOrderBy(thenOrderBy: SlimExpressionFunction<T, any, any>): this;
-  orderByDescending(orderBy: SlimExpressionFunction<T, any, any>): this;
+  select<V extends object>(
+    func: SlimExpressionFunction<T, V>
+  ): IQueryableSelectionResult<V, T>;
+  orderBy(orderBy: SlimExpressionFunction<T, any, any>): IQueryable<T, P>;
+  thenOrderBy(
+    thenOrderBy: SlimExpressionFunction<T, any, any>
+  ): IQueryable<T, P>;
+  orderByDescending(
+    orderBy: SlimExpressionFunction<T, any, any>
+  ): IQueryable<T, P>;
   add(...entities: DT[]): Promise<void> | void;
   update(...entities: DT[]): Promise<void> | void;
   remove(...entities: DT[]): Promise<void> | void;
   unTrack(...entities: DT[]): Promise<void> | void;
   find(id: any): Promise<T> | T;
+  exists(id: any): Promise<boolean>;
+  ignoreQueryFilters(): IQueryable<T, P>;
   // join(queryable: this): this; ??
 }
