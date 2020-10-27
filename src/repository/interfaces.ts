@@ -134,10 +134,30 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
   select<V extends object>(
     selector: SlimExpressionFunction<T, V>
   ): IQueryableSelectionResult<V, T>;
+
+  /**
+   * Specifies that the current query should not have any
+   * model-levelentity query filters applied.
+   */
   ignoreQueryFilters(): IQueryable<T, P>;
-  orderBy(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
-  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
-  orderByDescending(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+
+  /**
+   *  Sorts the elements of a sequence in descending order according to a key.
+   * @param keySelector A function to extract a key from an element.
+   */
+  orderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
+
+  /**
+   * Performs a subsequent ordering of the elements in a sequence in ascending order
+   * @param keySelector
+   */
+  thenOrderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
+
+  /**
+   * Sorts the elements of a sequence in ascending order according to a key.
+   * @param keySelector A function to extract a key from an element.
+   */
+  orderByDescending(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
 }
 
 export declare class IDbSet<
@@ -183,18 +203,54 @@ export declare class IDbSet<
   select<V extends object>(
     func: SlimExpressionFunction<T, V>
   ): IQueryableSelectionResult<V, T>;
-  orderBy(orderBy: SlimExpressionFunction<T, any, any>): IQueryable<T, P>;
-  thenOrderBy(
-    thenOrderBy: SlimExpressionFunction<T, any, any>
-  ): IQueryable<T, P>;
-  orderByDescending(
-    orderBy: SlimExpressionFunction<T, any, any>
-  ): IQueryable<T, P>;
+  orderBy(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+  orderByDescending(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
+
+  /**
+   * Begins tracking the given entity, and any other reachable entities that are not
+   * already being tracked, in the Added state such that they will be inserted
+   * into the database when `saveChanges()` is called.
+   * @param entities
+   */
   add(...entities: DT[]): Promise<void> | void;
+  /**
+   * Begins tracking the given entity and entries reachable from the given entity using
+   * the Modified state by default such that they will be updated
+   * in the database when `saveChanges()` is called.
+   * @param entities
+   */
   update(...entities: DT[]): Promise<void> | void;
+
+  /**
+   * Begins tracking the given entity in the Deleted state such that it will be removed
+   * from the database when `saveChanges()` is called.
+   * @param entities
+   */
   remove(...entities: DT[]): Promise<void> | void;
+
+  /**
+   * Removes entities from the list of currently tracked entities
+   * @param entities
+   */
   unTrack(...entities: DT[]): Promise<void> | void;
+
+  /**
+   * Finds an entity with the given primary key values. If an entity with the given
+   * primary key values is being tracked by the context, then it is returned
+   * immediately without making a request to the database. Otherwise, a query is made
+   * to the database for an entity with the given primary key values and this entity,
+   * if found, is attached to the context and returned. If no entity is found, then
+   * undefined is returned.
+   * @param type The entity type
+   * @param id The entity id
+   */
   find(id: any): Promise<T> | T;
+
+  /**
+   * Checks if an entity with the given id exists in the data store
+   * @param id
+   */
   exists(id: any): Promise<boolean>;
   ignoreQueryFilters(): IQueryable<T, P>;
   // join(queryable: this): this; ??

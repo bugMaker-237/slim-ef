@@ -230,18 +230,18 @@ export class DbSet<
     return (await this.execute<{ MIN: RT }>(QueryType.RAW_ONE)).MIN;
   }
 
-  orderBy(orderBy: SlimExpressionFunction<T>) {
-    this.applyOrderBy(orderBy);
+  orderBy(keySelector: SlimExpressionFunction<T>) {
+    this.applyOrderBy(keySelector);
     return this;
   }
 
-  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>) {
-    this.applyThenOrderBy(thenOrderBy);
+  thenOrderBy(keySelector: SlimExpressionFunction<T>) {
+    this.applyThenOrderBy(keySelector);
     return this;
   }
 
-  orderByDescending(orderBy: SlimExpressionFunction<T>) {
-    this.applyOrderByDescending(orderBy);
+  orderByDescending(keySelector: SlimExpressionFunction<T>) {
+    this.applyOrderByDescending(keySelector);
     return this;
   }
 

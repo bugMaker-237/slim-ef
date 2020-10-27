@@ -6,7 +6,7 @@ export interface IDbContext {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
    * already being tracked, in the Added state such that they will be inserted
-   * into the database when SaveChanges() is called.
+   * into the database when `saveChanges()` is called.
    * @param entities
    */
   add<T>(...entities: T[]): Promise<void> | void;
@@ -14,14 +14,14 @@ export interface IDbContext {
   /**
    * Begins tracking the given entity and entries reachable from the given entity using
    * the Modified state by default such that they will be updated
-   * in the database when SaveChanges() is called.
+   * in the database when `saveChanges()` is called.
    * @param entities
    */
   update<T>(...entities: T[]): Promise<void> | void;
 
   /**
    * Begins tracking the given entity in the Deleted state such that it will be removed
-   * from the database when SaveChanges() is called.
+   * from the database when `saveChanges()` is called.
    * @param entities
    */
   remove<T>(...entities: T[]): Promise<void> | void;
@@ -49,6 +49,10 @@ export interface IDbContext {
    */
   query(query: string, parameters: any[]): Promise<any>;
 
+  /**
+   * Discard all they tracked modifications of all entity types or a specific type
+   * @param entityType
+   */
   rollback(entityType: any | undefined): void;
   /**
    * Creates a DbSet<TEntity> that can be used to query and save instances of TEntity.
