@@ -79,7 +79,7 @@
     ]
   },
   "dependencies": {
-    "slim-exp": "file:../slim-exp",
+    "slim-exp": "^0.3.0",
     "typeorm": "^0.2.25"
   }
 }
