@@ -3,14 +3,14 @@ const entityMetadataKey = Symbol('entity:key');
 const propMetadataKey = Symbol('prop:key');
 const propListPropertyName = 'prop:list';
 
-export function EntityRepository<T>(entity: (new () => T) | Function) {
+export function EntityRepository<T>(entity: (new () => T) | (() => void)) {
   return (target: any) => {
     Reflect.defineMetadata(repositoryMetadataKey, entity, target.constructor);
     Reflect.defineMetadata(entityMetadataKey, entity, entity);
   };
 }
 
-export function DbSetEntity<T>(entity: (new () => T) | Function) {
+export function DbSetEntity<T>(entity: (new () => T) | (() => void)) {
   return (target: any, propertykey: string) => {
     Reflect.defineMetadata(
       repositoryMetadataKey,

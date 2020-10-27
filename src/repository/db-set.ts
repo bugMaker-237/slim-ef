@@ -76,6 +76,7 @@ export class DbSet<
   async firstOrDefault(): Promise<T>;
   async firstOrDefault<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>,
+    // tslint:disable-next-line: unified-signatures
     context: C
   ): Promise<T>;
   async firstOrDefault<C extends object>(
@@ -93,6 +94,7 @@ export class DbSet<
   async first(): Promise<T>;
   async first<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>,
+    // tslint:disable-next-line: unified-signatures
     context: C
   ): Promise<T>;
   async first<C extends object>(
@@ -126,6 +128,7 @@ export class DbSet<
   ): this;
   where<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>,
+    // tslint:disable-next-line: unified-signatures
     context: C
   ): this;
   where<C extends object>(
