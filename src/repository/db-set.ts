@@ -75,24 +75,24 @@ export class DbSet<
 
   async firstOrDefault(): Promise<T>;
   async firstOrDefault<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
+    predicate: SlimExpressionFunction<T, boolean, C>,
     context: C
   ): Promise<T>;
   async firstOrDefault<C extends object>(
-    func?: SlimExpressionFunction<T, boolean, C>
+    predicate?: SlimExpressionFunction<T, boolean, C>
   ): Promise<T>;
   async firstOrDefault<C extends object>(
-    func?: SlimExpressionFunction<T, boolean, C>,
+    predicate?: SlimExpressionFunction<T, boolean, C>,
     context?: C
   ): Promise<T> {
     this.applyPaging(0, 1);
-    this.where(func, context);
+    this.where(predicate, context);
     return await this.execute<T>(QueryType.ONE);
   }
 
   async first(): Promise<T>;
   async first<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
+    predicate: SlimExpressionFunction<T, boolean, C>,
     context: C
   ): Promise<T>;
   async first<C extends object>(
@@ -108,25 +108,31 @@ export class DbSet<
     return elt;
   }
 
-  include<S extends object>(include: SlimExpressionFunction<T, S>) {
-    this._lastInclude = include;
-    this.addInclude(include);
+  include<S extends object>(
+    navigationPropertyPath: SlimExpressionFunction<T, S>
+  ) {
+    this._lastInclude = navigationPropertyPath;
+    this.addInclude(navigationPropertyPath);
     return this;
   }
-  thenInclude<S extends object>(include: SlimExpressionFunction<S>) {
-    this.addChainedInclude(this._lastInclude, include);
+  thenInclude<S extends object>(
+    navigationPropertyPath: SlimExpressionFunction<S>
+  ) {
+    this.addChainedInclude(this._lastInclude, navigationPropertyPath);
     return this;
   }
-  where<C extends object>(func: SlimExpressionFunction<T, boolean, C>): this;
   where<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
+    predicate: SlimExpressionFunction<T, boolean, C>
+  ): this;
+  where<C extends object>(
+    predicate: SlimExpressionFunction<T, boolean, C>,
     context: C
   ): this;
   where<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
+    predicate: SlimExpressionFunction<T, boolean, C>,
     context: C | null = null
   ): this {
-    this.addCriteria(func, context);
+    this.addCriteria(predicate, context);
     return this;
   }
   take(count: number) {
@@ -140,18 +146,18 @@ export class DbSet<
     return this;
   }
 
-  select<V extends object>(func: SlimExpressionFunction<T, V>) {
+  select<V extends object>(selector: SlimExpressionFunction<T, V>) {
     const thisType = this[UnderlyingType];
     this._onGoingPromise = this.context
       .getMetadata(thisType)
       .then(proxyInstance => {
-        const res = func(proxyInstance as T) as ProxyMetaDataInstance<V>;
+        const res = selector(proxyInstance as T) as ProxyMetaDataInstance<V>;
         const fieldsToSelect = this._extractKeyFields<V>(res);
-        const selector: FieldsSelector<T> = {
-          builder: func,
+        const s: FieldsSelector<T> = {
+          builder: selector,
           fieldsToSelect
         };
-        this.applySelector(selector);
+        this.applySelector(s);
         return true;
       })
       .catch(rej => {
@@ -188,39 +194,39 @@ export class DbSet<
   }
 
   async count<C extends object>(
-    func?: SlimExpressionFunction<T, boolean, C>
+    predicate?: SlimExpressionFunction<T, boolean, C>
   ): Promise<number> {
-    this.addCriteria(func);
+    this.addCriteria(predicate);
     this.applyFunction('COUNT', null);
     return Number.parseFloat(
       (await this.execute<{ COUNT: string }>(QueryType.RAW_ONE)).COUNT
     );
   }
 
-  async sum(field: SlimExpressionFunction<T, number>): Promise<number> {
-    this.applyFunction('SUM', field);
+  async sum(selector: SlimExpressionFunction<T, number>): Promise<number> {
+    this.applyFunction('SUM', selector);
     return Number.parseFloat(
       (await this.execute<{ SUM: string }>(QueryType.RAW_ONE)).SUM
     );
   }
 
-  async average(field: SlimExpressionFunction<T, number>): Promise<number> {
-    this.applyFunction('AVG', field);
+  async average(selector: SlimExpressionFunction<T, number>): Promise<number> {
+    this.applyFunction('AVG', selector);
     return Number.parseFloat(
       (await this.execute<{ AVG: string }>(QueryType.RAW_ONE)).AVG
     );
   }
 
   async max<RT extends ExpressionResult>(
-    field: SlimExpressionFunction<T, RT>
+    selector: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
-    this.applyFunction('MAX', field);
+    this.applyFunction('MAX', selector);
     return (await this.execute<{ MAX: RT }>(QueryType.RAW_ONE)).MAX;
   }
   async min<RT extends ExpressionResult>(
-    field: SlimExpressionFunction<T, RT>
+    selector: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
-    this.applyFunction('MIN', field);
+    this.applyFunction('MIN', selector);
     return (await this.execute<{ MIN: RT }>(QueryType.RAW_ONE)).MIN;
   }
 

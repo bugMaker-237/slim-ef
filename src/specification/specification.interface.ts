@@ -15,7 +15,7 @@ export interface FieldsSelector<T, R extends object = any> {
     field: string;
     // alias: string;
   }[];
-  builder?: SlimExpressionFunction<T, any, any>;
+  builder?: SlimExpressionFunction<T, R, any>;
 }
 
 export interface ISpecification<T = undefined> {
