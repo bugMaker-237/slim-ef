@@ -376,6 +376,32 @@ interface IDbSet<T> {
 
 #### Examples
 
+You can play around and do stuffs like this :smile:
+
+```ts
+  ...
+  const context = new DeltaTravelDBContext();
+
+  const tripsQuery = context.trips
+    .include(t => t.agency)
+    .include(t => t.passengers)
+    .select(
+      t =>
+        new TripResponse(
+          t.agency.name,
+          t.agency.email,
+          t.departureDate,
+          t.passengers.map(p => ({
+            name: p.lastname ,
+            phone: p.phone,
+            ID: p.IDNumber
+          }))
+        )
+    );
+  const res = await tripsQuery.toList();
+
+```
+
 For detail examples see : [Slim-ef-examples](https://github.com/bugMaker-237/slim-ef-examples)
 
 ## Not YET Supported
