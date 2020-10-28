@@ -1,4 +1,4 @@
-import { DeepPartial } from "./_internal.interface";
+import { DeepPartial } from './_internal.interface';
 
 function __patch<T>(entityShema: new () => T, entity: DeepPartial<T>): T {
   const t = new entityShema();
@@ -17,6 +17,6 @@ export function patch<T>(entityShema: new () => T) {
 export const With = patch;
 export function patchM<T>(entityShema: new () => T) {
   return (...entities: DeepPartial<T>[]): T[] => {
-    return entities.map((e) => __patch(entityShema, e));
+    return entities.map(e => __patch(entityShema, e));
   };
 }
