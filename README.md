@@ -381,10 +381,21 @@ You can play around and do stuffs like this :smile:
 ```ts
   ...
   const context = new DeltaTravelDBContext();
+  const pd = {
+      departureDate: new Date(2000, 1, 1),
+      estimatedArrivalDate: new Date(2016, 1, 1)
+    };
 
   const tripsQuery = context.trips
     .include(t => t.agency)
     .include(t => t.passengers)
+    .where(
+      (t, $) =>
+        t.departureDate > $.departureDate &&
+        (t.estimatedArrivalDate < $.estimatedArrivalDate ||
+          t.passengers.some(p => p.willTravel === true)),
+      pd
+    )
     .select(
       t =>
         new TripResponse(
