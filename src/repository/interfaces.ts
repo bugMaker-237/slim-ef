@@ -7,6 +7,7 @@ export interface QueryRefiner<T extends object> {
 }
 
 export type ExpressionResult = object | PrimitiveType;
+export type Includable<T> = T extends any[] ? T[0] : T;
 
 export type PrimitiveType = string | number | boolean;
 
@@ -64,8 +65,8 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param navigationPropertyPath The type of the related entity to be included.
    */
   thenInclude<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<P, S>
-  ): IQueryable<T, S> & IQueryable<T, P>;
+    navigationPropertyPath: SlimExpressionFunction<Includable<P>, S>
+  ): IQueryable<T, S> & IQueryable<T, Includable<P>>;
 
   /**
    * Filters the sequence based on a predicate.
@@ -160,53 +161,11 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
   orderByDescending(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
 }
 
-export declare class IDbSet<
+export interface IDbSet<
   T extends object,
   P extends ExpressionResult = any,
   DT = DeepPartial<T>
-> implements IQueryable<T, P> {
-  constructor(context: IDbContext | IUnitOfWork);
-  first(): Promise<T>;
-  first<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
-    context?: C
-  ): Promise<T>;
-  firstOrDefault(): Promise<T>;
-  firstOrDefault<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
-    context?: C
-  ): Promise<T>;
-  toList(): Promise<T[]>;
-  include<S extends object>(
-    includes: SlimExpressionFunction<T, S, any>
-  ): IQueryable<T, S> & IQueryable<T, P>;
-  thenInclude<S extends object>(
-    includes: SlimExpressionFunction<P, S, any>
-  ): IQueryable<T, S> & IQueryable<T, P>;
-  where<C extends object>(
-    func: SlimExpressionFunction<T, boolean, C>,
-    context?: C
-  ): IQueryable<T, P>;
-  take(count: number): IQueryable<T, P>;
-  skip(count: number): IQueryable<T, P>;
-  sum(field: SlimExpressionFunction<T, number>): Promise<number>;
-  average(field: SlimExpressionFunction<T, number>): Promise<number>;
-  count<C extends object>(
-    func?: SlimExpressionFunction<T, boolean, C>
-  ): Promise<number>;
-  max<R extends ExpressionResult>(
-    field: SlimExpressionFunction<T, R>
-  ): Promise<R>;
-  min<R extends ExpressionResult>(
-    field: SlimExpressionFunction<T, R>
-  ): Promise<R>;
-  select<V extends object>(
-    func: SlimExpressionFunction<T, V>
-  ): IQueryableSelectionResult<V, T>;
-  orderBy(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
-  thenOrderBy(thenOrderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
-  orderByDescending(orderBy: SlimExpressionFunction<T>): IQueryable<T, P>;
-
+> extends IQueryable<T, P> {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
    * already being tracked, in the Added state such that they will be inserted
