@@ -8,9 +8,9 @@ import {
   DbSetEntity,
   IDbSet,
   SQLQuerySpecificationEvaluator
-} from '../src/index';
-import { IDbContextOptionsBuilder } from '../src/uow/interfaces';
-import { DbContextModelBuilder } from '../src/uow/model-builder';
+} from '../lib/index';
+import { IDbContextOptionsBuilder } from '../lib/uow/interfaces';
+import { DbContextModelBuilder } from '../lib/uow/model-builder';
 import { Agency } from './entities/agency';
 import { Person } from './entities/person';
 import { Trip } from './entities/trip';

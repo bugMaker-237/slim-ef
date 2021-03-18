@@ -65,35 +65,31 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     return this._selector;
   }
 
-  protected applyPaging(skip: number, take: number) {
+  applyPaging(skip: number, take: number) {
     this._skip = skip;
     this._take = take;
     this._isPagingEnabled = true;
   }
-  protected addInclude(include: SlimExpressionFunction<T>) {
+  addInclude(include: SlimExpressionFunction<T>) {
     if (include) this._includes.push(include);
   }
 
-  protected addChainedInclude<S extends object>(
+  addChainedInclude<S extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S>
   );
-  protected addChainedInclude<S extends object, R extends object>(
+  addChainedInclude<S extends object, R extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S, R>,
     include3: SlimExpressionFunction<R>
   );
-  protected addChainedInclude<
-    S extends object,
-    R extends object,
-    P extends object
-  >(
+  addChainedInclude<S extends object, R extends object, P extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S, R>,
     include3: SlimExpressionFunction<R, P>,
     include4: SlimExpressionFunction<P>
   );
-  protected addChainedInclude<
+  addChainedInclude<
     S extends object,
     R extends object,
     P extends object,
@@ -137,35 +133,32 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     }
   }
 
-  protected addCriteria<C extends object, S extends ExpressionResult>(
+  addCriteria<C extends object, S extends ExpressionResult>(
     func: SlimExpressionFunction<T, S, C>,
     context?: C | null
   ) {
     if (func) this._criterias.push({ func, context });
   }
-  protected applySelector(selector: FieldsSelector<T>) {
+  applySelector(selector: FieldsSelector<T>) {
     if (selector) this._selector = selector;
   }
-  protected applyOrderBy(orderBy: SlimExpressionFunction<T>) {
+  applyOrderBy(orderBy: SlimExpressionFunction<T>) {
     this._orderBy = orderBy;
   }
-  protected applyFunction(
-    type: FunctionQueryType,
-    func: SlimExpressionFunction<T>
-  ) {
+  applyFunction(type: FunctionQueryType, func: SlimExpressionFunction<T>) {
     if (type)
       this._func = {
         type,
         func
       };
   }
-  protected applyThenOrderBy(thenOrderBy: SlimExpressionFunction<T>) {
+  applyThenOrderBy(thenOrderBy: SlimExpressionFunction<T>) {
     this._orderByDescending = thenOrderBy;
   }
-  protected applyOrderByDescending(orderBy: SlimExpressionFunction<T>) {
+  applyOrderByDescending(orderBy: SlimExpressionFunction<T>) {
     this._orderByDescending = orderBy;
   }
-  protected extend(spec: ISpecification<T>) {
+  extend(spec: ISpecification<T>) {
     this._includes.concat(spec.getIncludes());
     this._chainedIncludes.concat(spec.getChainedIncludes());
     this._criterias.concat(spec.getCriterias());
@@ -174,7 +167,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     this._isPagingEnabled = spec.getIsPagingEnabled();
   }
 
-  protected clearSpecs() {
+  clearSpecs() {
     this._includes = [];
     this._chainedIncludes = [];
     this._criterias = [];

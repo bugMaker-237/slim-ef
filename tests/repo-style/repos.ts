@@ -1,4 +1,4 @@
-import { EntityRepository, GenericRepository } from '../../src/repository';
+import { EntityRepository, GenericRepository } from '../../lib/repository';
 import { Agency } from '../entities/agency';
 import { Person } from '../entities/person';
 import { Trip } from '../entities/trip';

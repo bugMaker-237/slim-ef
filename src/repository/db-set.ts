@@ -6,7 +6,7 @@ import {
 } from '../specification/specification.interface';
 import { ExpressionResult, SlimExpressionFunction } from 'slim-exp';
 import { IDbContext, IUnitOfWork } from '../uow';
-import { IDbSet } from './interfaces';
+import { IDbSet, Includable, IQueryable } from './interfaces';
 import { DeepPartial } from 'typeorm';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
@@ -18,12 +18,10 @@ import {
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
-export class DbSet<
-  T extends object = any,
-  R extends T = any,
-  E = DeepPartial<T>
-> extends BaseSpecification<T> implements IDbSet<T, R, E> {
+export class DbSet<T extends object = any, E = DeepPartial<T>>
+  implements IDbSet<T, E> {
   private _queryTypeToExecute = QueryType.ALL;
+  private _baseSpec = new BaseSpecification<T>();
   private _lastInclude: SlimExpressionFunction<T>;
   private _currentSkip: number;
   private _currentTake: number;
@@ -32,9 +30,9 @@ export class DbSet<
   private _onGoingPromise: Promise<boolean>;
 
   constructor(context: IDbContext | IUnitOfWork);
-  constructor(public context: (IDbContext | IUnitOfWork) & IInternalDbContext) {
-    super();
-  }
+  constructor(
+    public context: (IDbContext | IUnitOfWork) & IInternalDbContext
+  ) {}
 
   private get [UnderlyingType]() {
     if (!this._underlyingType) {
@@ -86,7 +84,7 @@ export class DbSet<
     predicate?: SlimExpressionFunction<T, boolean, C>,
     context?: C
   ): Promise<T> {
-    this.applyPaging(0, 1);
+    this._baseSpec.applyPaging(0, 1);
     this.where(predicate, context);
     return await this.execute<T>(QueryType.ONE);
   }
@@ -114,14 +112,14 @@ export class DbSet<
     navigationPropertyPath: SlimExpressionFunction<T, S>
   ) {
     this._lastInclude = navigationPropertyPath;
-    this.addInclude(navigationPropertyPath);
-    return this;
+    this._baseSpec.addInclude(navigationPropertyPath);
+    return (this as unknown) as IQueryable<S, T>;
   }
   thenInclude<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<S>
+    navigationPropertyPath: SlimExpressionFunction<Includable<T>, S>
   ) {
-    this.addChainedInclude(this._lastInclude, navigationPropertyPath);
-    return this;
+    this._baseSpec.addChainedInclude(this._lastInclude, navigationPropertyPath);
+    return (this as unknown) as IQueryable<S, T>;
   }
   where<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>
@@ -135,16 +133,16 @@ export class DbSet<
     predicate: SlimExpressionFunction<T, boolean, C>,
     context: C | null = null
   ): this {
-    this.addCriteria(predicate, context);
+    this._baseSpec.addCriteria(predicate, context);
     return this;
   }
   take(count: number) {
-    this.applyPaging(this._currentSkip, count);
+    this._baseSpec.applyPaging(this._currentSkip, count);
     this._currentTake = count;
     return this;
   }
   skip(count: number) {
-    this.applyPaging(count, this._currentTake);
+    this._baseSpec.applyPaging(count, this._currentTake);
     this._currentSkip = count;
     return this;
   }
@@ -160,7 +158,7 @@ export class DbSet<
           builder: selector,
           fieldsToSelect
         };
-        this.applySelector(s);
+        this._baseSpec.applySelector(s);
         return true;
       })
       .catch(rej => {
@@ -199,22 +197,22 @@ export class DbSet<
   async count<C extends object>(
     predicate?: SlimExpressionFunction<T, boolean, C>
   ): Promise<number> {
-    this.addCriteria(predicate);
-    this.applyFunction('COUNT', null);
+    this._baseSpec.addCriteria(predicate);
+    this._baseSpec.applyFunction('COUNT', null);
     return Number.parseFloat(
       (await this.execute<{ COUNT: string }>(QueryType.RAW_ONE)).COUNT
     );
   }
 
   async sum(selector: SlimExpressionFunction<T, number>): Promise<number> {
-    this.applyFunction('SUM', selector);
+    this._baseSpec.applyFunction('SUM', selector);
     return Number.parseFloat(
       (await this.execute<{ SUM: string }>(QueryType.RAW_ONE)).SUM
     );
   }
 
   async average(selector: SlimExpressionFunction<T, number>): Promise<number> {
-    this.applyFunction('AVG', selector);
+    this._baseSpec.applyFunction('AVG', selector);
     return Number.parseFloat(
       (await this.execute<{ AVG: string }>(QueryType.RAW_ONE)).AVG
     );
@@ -223,33 +221,33 @@ export class DbSet<
   async max<RT extends ExpressionResult>(
     selector: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
-    this.applyFunction('MAX', selector);
+    this._baseSpec.applyFunction('MAX', selector);
     return (await this.execute<{ MAX: RT }>(QueryType.RAW_ONE)).MAX;
   }
   async min<RT extends ExpressionResult>(
     selector: SlimExpressionFunction<T, RT>
   ): Promise<RT> {
-    this.applyFunction('MIN', selector);
+    this._baseSpec.applyFunction('MIN', selector);
     return (await this.execute<{ MIN: RT }>(QueryType.RAW_ONE)).MIN;
   }
 
   orderBy(keySelector: SlimExpressionFunction<T>) {
-    this.applyOrderBy(keySelector);
+    this._baseSpec.applyOrderBy(keySelector);
     return this;
   }
 
   thenOrderBy(keySelector: SlimExpressionFunction<T>) {
-    this.applyThenOrderBy(keySelector);
+    this._baseSpec.applyThenOrderBy(keySelector);
     return this;
   }
 
   orderByDescending(keySelector: SlimExpressionFunction<T>) {
-    this.applyOrderByDescending(keySelector);
+    this._baseSpec.applyOrderByDescending(keySelector);
     return this;
   }
 
   asSpecification(): ISpecification<T> {
-    return this;
+    return this._baseSpec;
   }
 
   ignoreQueryFilters(): this {
@@ -258,12 +256,12 @@ export class DbSet<
   }
 
   fromSpecification(spec: ISpecification<T>): IDbSet<T> {
-    this.extend(spec);
-    this.applySelector(spec.getSelector());
-    this.applyOrderBy(spec.getOrderBy());
-    this.applyOrderByDescending(spec.getOrderByDescending());
-    this.applyThenOrderBy(spec.getThenBy());
-    return this;
+    this._baseSpec.extend(spec);
+    this._baseSpec.applySelector(spec.getSelector());
+    this._baseSpec.applyOrderBy(spec.getOrderBy());
+    this._baseSpec.applyOrderByDescending(spec.getOrderByDescending());
+    this._baseSpec.applyThenOrderBy(spec.getThenBy());
+    return this as any;
   }
 
   async toList(): Promise<T[]> {
@@ -277,7 +275,7 @@ export class DbSet<
         type,
         this._ignoreFilters
       )) as TResult;
-      this.clearSpecs();
+      this._baseSpec.clearSpecs();
       return res;
     }
   }

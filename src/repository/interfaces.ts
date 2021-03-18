@@ -7,8 +7,7 @@ export interface QueryRefiner<T extends object> {
 }
 
 export type ExpressionResult = object | PrimitiveType;
-export type Includable<T> = T extends any[] ? T[0] : T;
-
+export type Includable<T> = T extends (infer U)[] ? U : T;
 export type PrimitiveType = string | number | boolean;
 
 interface IQueryableSelectionResult<V extends object, T extends object = any> {
@@ -46,7 +45,7 @@ interface IQueryableSelectionResult<V extends object, T extends object = any> {
   toList(): Promise<V[]>;
 }
 
-export interface IQueryable<T extends object, P extends ExpressionResult = any>
+export interface IQueryable<T extends object, O extends object = T>
   extends IQueryableSelectionResult<T> {
   /**
    * Specifies related entities to include in the query results. The navigation property
@@ -57,7 +56,7 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    */
   include<S extends object>(
     navigationPropertyPath: SlimExpressionFunction<T, S>
-  ): IQueryable<T, S> & IQueryable<T, P>;
+  ): IQueryable<S, O>;
 
   /**
    * Specifies additional related data to be further included based on a related type
@@ -65,8 +64,8 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param navigationPropertyPath The type of the related entity to be included.
    */
   thenInclude<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<Includable<P>, S>
-  ): IQueryable<T, S> & IQueryable<T, Includable<P>>;
+    navigationPropertyPath: SlimExpressionFunction<Includable<T>, S>
+  ): IQueryable<S, O>;
 
   /**
    * Filters the sequence based on a predicate.
@@ -74,34 +73,34 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param context The predicate data source
    */
   where<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>,
+    predicate: SlimExpressionFunction<O, boolean, C>,
     context?: C
-  ): IQueryable<T, P>;
+  ): IQueryable<O>;
   /**
    * Returns a specified number of contiguous elements from the start of the sequence.
    * @param count The number of elements to return.
    */
-  take(count: number): IQueryable<T, P>;
+  take(count: number): IQueryable<O>;
 
   /**
    * Bypasses a specified number of elements in a sequence and then returns the remaining elements.
    * @param count The number of elements to skip before returning the remaining elements.
    */
-  skip(count: number): IQueryable<T, P>;
+  skip(count: number): IQueryable<O>;
 
   /**
    * Computes the sum of the sequence of number values that is obtained by
    * invoking a projection function on each element of the input sequence.
    * @param selector A projection function to apply to each element.
    */
-  sum(selector: SlimExpressionFunction<T, number>): Promise<number>;
+  sum(selector: SlimExpressionFunction<O, number>): Promise<number>;
 
   /**
    * Computes the average of a sequence of number values that is obtained by
    * invoking a projection function on each element of the input sequence.
    * @param selector A projection function to apply to each element.
    */
-  average(selector: SlimExpressionFunction<T, number>): Promise<number>;
+  average(selector: SlimExpressionFunction<O, number>): Promise<number>;
 
   /**
    * Returns the number of elements in the specified sequence. If condition is provided,
@@ -109,7 +108,7 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param predicate A function to test each element for a condition.
    */
   count<C extends object>(
-    predicate?: SlimExpressionFunction<T, boolean, C>
+    predicate?: SlimExpressionFunction<O, boolean, C>
   ): Promise<number>;
   /**
    * Invokes a projection function on each element of the sequence
@@ -117,7 +116,7 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param selector A projection function to apply to each element.
    */
   max<R extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, R>
+    selector: SlimExpressionFunction<O, R>
   ): Promise<R>;
   /**
    * Invokes a projection function on each element of the sequence
@@ -125,7 +124,7 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param selector A projection function to apply to each element.
    */
   min<R extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, R>
+    selector: SlimExpressionFunction<O, R>
   ): Promise<R>;
 
   /**
@@ -133,39 +132,36 @@ export interface IQueryable<T extends object, P extends ExpressionResult = any>
    * @param selector A projection function to apply to each element.
    */
   select<V extends object>(
-    selector: SlimExpressionFunction<T, V>
-  ): IQueryableSelectionResult<V, T>;
+    selector: SlimExpressionFunction<O, V>
+  ): IQueryableSelectionResult<V, O>;
 
   /**
    * Specifies that the current query should not have any
    * model-levelentity query filters applied.
    */
-  ignoreQueryFilters(): IQueryable<T, P>;
+  ignoreQueryFilters(): IQueryable<O>;
 
   /**
    *  Sorts the elements of a sequence in descending order according to a key.
    * @param keySelector A function to extract a key from an element.
    */
-  orderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
+  orderBy(keySelector: SlimExpressionFunction<O>): IQueryable<O>;
 
   /**
    * Performs a subsequent ordering of the elements in a sequence in ascending order
    * @param keySelector
    */
-  thenOrderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
+  thenOrderBy(keySelector: SlimExpressionFunction<O>): IQueryable<O>;
 
   /**
    * Sorts the elements of a sequence in ascending order according to a key.
    * @param keySelector A function to extract a key from an element.
    */
-  orderByDescending(keySelector: SlimExpressionFunction<T>): IQueryable<T, P>;
+  orderByDescending(keySelector: SlimExpressionFunction<O>): IQueryable<O>;
 }
 
-export interface IDbSet<
-  T extends object,
-  P extends ExpressionResult = any,
-  DT = DeepPartial<T>
-> extends IQueryable<T, P> {
+export interface IDbSet<T extends object, DT = DeepPartial<T>>
+  extends IQueryable<T, T> {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
    * already being tracked, in the Added state such that they will be inserted
@@ -211,6 +207,6 @@ export interface IDbSet<
    * @param id
    */
   exists(id: any): Promise<boolean>;
-  ignoreQueryFilters(): IQueryable<T, P>;
+  ignoreQueryFilters(): IQueryable<T>;
   // join(queryable: this): this; ??
 }

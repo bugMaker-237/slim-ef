@@ -1,4 +1,3 @@
-import { ExpressionResult } from 'slim-exp';
 import { ISpecification } from '../specification/specification.interface';
 import { IDbSet, IQueryable } from './interfaces';
 
@@ -10,10 +9,8 @@ export type DeepPartial<T> = {
     : DeepPartial<T[P]>;
 };
 
-export interface IInternalDbSet<
-  T extends object,
-  P extends ExpressionResult = any
-> extends IDbSet<T, P> {
+export interface IInternalDbSet<T extends object>
+  extends IDbSet<T> {
   asSpecification(): ISpecification<T>;
-  fromSpecification(spec: ISpecification<T>): IQueryable<T, P>;
+  fromSpecification(spec: ISpecification<T>): IQueryable<T>;
 }
