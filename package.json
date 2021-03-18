@@ -1,6 +1,6 @@
 {
   "name": "slim-ef",
-  "version": "0.1.61",
+  "version": "0.1.62",
   "description": "An implementation of basic entity framework functionnalities in typescript",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -83,7 +83,7 @@
     ]
   },
   "dependencies": {
-    "slim-exp": "^0.3.0",
+    "slim-exp": "^0.3.12",
     "typeorm": "^0.2.25"
   }
 }
