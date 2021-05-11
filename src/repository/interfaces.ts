@@ -160,7 +160,7 @@ export interface IQueryable<T extends object, O extends object = T>
   orderByDescending(keySelector: SlimExpressionFunction<O>): IQueryable<O>;
 }
 
-export interface IDbSet<T extends object, DT = DeepPartial<T>>
+export interface IDbSet<T extends object, DT = DeepPartial<T> | T>
   extends IQueryable<T, T> {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not

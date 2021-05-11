@@ -18,7 +18,7 @@ import {
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
-export class DbSet<T extends object = any, E = DeepPartial<T>>
+export class DbSet<T extends object = any, E = DeepPartial<T> | T>
   implements IDbSet<T, E> {
   private _queryTypeToExecute = QueryType.ALL;
   private _baseSpec = new BaseSpecification<T>();
