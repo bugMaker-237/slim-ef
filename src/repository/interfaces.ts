@@ -121,17 +121,17 @@ export interface IQueryable<T extends EntityBase, R extends T | T[], P = T>
    * and returns the maximum resulting value.
    * @param selector A projection function to apply to each element.
    */
-  max<R extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, R>
-  ): Promise<R>;
+  max<O extends ExpressionResult>(
+    selector: SlimExpressionFunction<T, O>
+  ): Promise<O>;
   /**
    * Invokes a projection function on each element of the sequence
    * and returns the minimum resulting value.
    * @param selector A projection function to apply to each element.
    */
-  min<R extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, R>
-  ): Promise<R>;
+  min<O extends ExpressionResult>(
+    selector: SlimExpressionFunction<T, O>
+  ): Promise<O>;
 
   /**
    * Projects each element of a sequence into a new form.
