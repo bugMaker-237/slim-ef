@@ -51,7 +51,7 @@ interface IQueryableSelectionResult<
   toList(): Promise<V[]>;
 }
 
-export interface IQueryable<T extends EntityBase, R extends T | T[], P = T>
+export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
   extends IQueryableSelectionResult<T> {
   /**
    * Specifies related entities to include in the query results. The navigation property

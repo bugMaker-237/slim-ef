@@ -20,7 +20,7 @@ export const UnderlyingType = Symbol('__UnderlyingType');
 
 export class DbSet<
   T extends EntityBase,
-  R extends T | T[],
+  R extends T | T[] = T,
   P = T,
   E = T | DeepPartial<T>
 > implements IDbSet<T, R, P, E> {
