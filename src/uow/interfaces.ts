@@ -58,7 +58,7 @@ export interface IDbContext {
    * Creates a DbSet<TEntity> that can be used to query and save instances of TEntity.
    * @param type
    */
-  set<T extends object>(type: new (...args: any) => T): IDbSet<T>;
+  set<T extends object>(type: new (...args: any) => T): IDbSet<T, T>;
 
   /**
    * Saves all changes made in this context to the database.

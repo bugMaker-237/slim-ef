@@ -57,7 +57,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     optionsBuilder: IDbContextOptionsBuilder
   ): void;
 
-  public set<T extends object>(type: new (...args: any) => T): IDbSet<T> {
+  public set<T extends object>(type: new (...args: any) => T): IDbSet<T, T> {
     const dbSet = new DbSet<T, T>(this);
     dbSet[UnderlyingType] = type;
     return dbSet as any;
@@ -193,7 +193,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     const underType: string[] = getEntitySetKeys(this);
     if (underType) {
       for (const t of underType) {
-        const dbset = new DbSet<any>(this);
+        const dbset = new DbSet<any, any>(this);
         const entity = getEntitySet(this, t);
 
         if (dbset && entity) {
@@ -250,7 +250,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   }
 
   private _getSQLBuilder<T extends object>(
-    type: IDbSet<T>
+    type: IDbSet<T, T>
   ): QueryInitializer<T> {
     const repo = this._getRepository(type);
     const initializer = (alias: string) => repo.createQueryBuilder(alias);

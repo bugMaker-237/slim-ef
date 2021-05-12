@@ -23,12 +23,12 @@ export function isQueryable<T extends object>(
   obj: any
 ): obj is QueryRefiner<T> {
   const props = [
-    nameof<IQueryable<T>>(s => s.include),
-    nameof<IQueryable<T>>(s => s.orderBy),
-    nameof<IQueryable<T>>(s => s.orderByDescending),
-    nameof<IQueryable<T>>(s => s.select),
-    nameof<IQueryable<T>>(s => s.thenOrderBy),
-    nameof<IQueryable<T>>(s => s.where)
+    nameof<IQueryable<T, T>>(s => s.include),
+    nameof<IQueryable<T, T>>(s => s.orderBy),
+    nameof<IQueryable<T, T>>(s => s.orderByDescending),
+    nameof<IQueryable<T, T>>(s => s.select),
+    nameof<IQueryable<T, T>>(s => s.thenOrderBy),
+    nameof<IQueryable<T, T>>(s => s.where)
   ];
   const content: string = obj.toString();
 

@@ -7,6 +7,7 @@ export {
   IQueryable,
   GenericRepository,
   ExpressionResult,
+  DeepPartial,
   EntityRepository
 } from './repository';
 

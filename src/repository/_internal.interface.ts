@@ -9,8 +9,7 @@ export type DeepPartial<T> = {
     : DeepPartial<T[P]>;
 };
 
-export interface IInternalDbSet<T extends object>
-  extends IDbSet<T> {
+export interface IInternalDbSet<T extends object> extends IDbSet<T, T> {
   asSpecification(): ISpecification<T>;
-  fromSpecification(spec: ISpecification<T>): IQueryable<T>;
+  fromSpecification(spec: ISpecification<T>): IQueryable<T, T>;
 }

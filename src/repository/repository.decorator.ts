@@ -5,7 +5,7 @@ const propListPropertyName = 'prop:list';
 
 export function EntityRepository<T>(entity: (new () => T) | (() => void)) {
   return (target: any) => {
-    Reflect.defineMetadata(repositoryMetadataKey, entity, target.constructor);
+    Reflect.defineMetadata(repositoryMetadataKey, entity, target);
     Reflect.defineMetadata(entityMetadataKey, entity, entity);
   };
 }

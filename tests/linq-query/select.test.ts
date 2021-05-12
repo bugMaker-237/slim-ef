@@ -1,4 +1,6 @@
 import { FakeDBContext } from '../db-context';
+import { LinqRepository, RepositoryBase } from 'typeorm-linq-repository';
+import { Agency } from '../entities/agency';
 
 class TripResponse {
   constructor(

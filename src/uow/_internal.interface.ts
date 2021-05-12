@@ -9,7 +9,7 @@ import {
 
 export interface IInternalDbContext {
   execute<T extends object, R = T[]>(
-    queryable: IDbSet<T>,
+    queryable: IDbSet<T, T>,
     type: QueryType,
     ignoreFilters?: boolean
   ): Promise<R>;

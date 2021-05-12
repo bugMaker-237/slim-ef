@@ -6,7 +6,7 @@ import {
 } from '../specification/specification.interface';
 import { ExpressionResult, SlimExpressionFunction } from 'slim-exp';
 import { IDbContext, IUnitOfWork } from '../uow';
-import { IDbSet, Includable, IQueryable } from './interfaces';
+import { EntityBase, IDbSet, Includable, IQueryable } from './interfaces';
 import { DeepPartial } from 'typeorm';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
@@ -18,8 +18,12 @@ import {
 
 export const UnderlyingType = Symbol('__UnderlyingType');
 
-export class DbSet<T extends object = any, E = DeepPartial<T> | T>
-  implements IDbSet<T, E> {
+export class DbSet<
+  T extends EntityBase,
+  R extends T | T[],
+  P = T,
+  E = T | DeepPartial<T>
+> implements IDbSet<T, R, P, E> {
   private _queryTypeToExecute = QueryType.ALL;
   private _baseSpec = new BaseSpecification<T>();
   private _lastInclude: SlimExpressionFunction<T>;
@@ -109,37 +113,30 @@ export class DbSet<T extends object = any, E = DeepPartial<T> | T>
   }
 
   include<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<T, S>
+    navigationPropertyPath: SlimExpressionFunction<T, Includable<S>>
   ) {
     this._lastInclude = navigationPropertyPath;
     this._baseSpec.addInclude(navigationPropertyPath);
-    return (this as unknown) as IQueryable<S, T>;
+    return (this as unknown) as IQueryable<T, R, S>;
   }
   thenInclude<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<Includable<T>, S>
+    navigationPropertyPath: SlimExpressionFunction<P, Includable<S>>
   ) {
     this._baseSpec.addChainedInclude(this._lastInclude, navigationPropertyPath);
-    return (this as unknown) as IQueryable<S, T>;
+    return (this as unknown) as IQueryable<T, R, S>;
   }
-  where<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>
-  ): this;
+
   where<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>,
-    // tslint:disable-next-line: unified-signatures
-    context: C
-  ): this;
-  where<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>,
-    context: C | null = null
-  ): this {
+    context?: C
+  ): IQueryable<T, R, P> {
     this._baseSpec.addCriteria(predicate, context);
-    return this;
+    return (this as unknown) as IQueryable<T, R, P>;
   }
   take(count: number) {
     this._baseSpec.applyPaging(this._currentSkip, count);
     this._currentTake = count;
-    return this;
+    return this as IQueryable<T, R, P>;
   }
   skip(count: number) {
     this._baseSpec.applyPaging(count, this._currentTake);
@@ -152,7 +149,7 @@ export class DbSet<T extends object = any, E = DeepPartial<T> | T>
     this._onGoingPromise = this.context
       .getMetadata(thisType)
       .then(proxyInstance => {
-        const res = selector(proxyInstance as T) as ProxyMetaDataInstance<V>;
+        const res = selector(proxyInstance as any) as ProxyMetaDataInstance<V>;
         const fieldsToSelect = this._extractKeyFields<V>(res);
         const s: FieldsSelector<T> = {
           builder: selector,
@@ -233,29 +230,29 @@ export class DbSet<T extends object = any, E = DeepPartial<T> | T>
 
   orderBy(keySelector: SlimExpressionFunction<T>) {
     this._baseSpec.applyOrderBy(keySelector);
-    return this;
+    return this as IQueryable<T, R, P>;
   }
 
   thenOrderBy(keySelector: SlimExpressionFunction<T>) {
     this._baseSpec.applyThenOrderBy(keySelector);
-    return this;
+    return this as IQueryable<T, R, P>;
   }
 
   orderByDescending(keySelector: SlimExpressionFunction<T>) {
     this._baseSpec.applyOrderByDescending(keySelector);
-    return this;
+    return this as IQueryable<T, R, P>;
   }
 
   asSpecification(): ISpecification<T> {
     return this._baseSpec;
   }
 
-  ignoreQueryFilters(): this {
+  ignoreQueryFilters() {
     this._ignoreFilters = true;
-    return this;
+    return this as IQueryable<T, R, P>;
   }
 
-  fromSpecification(spec: ISpecification<T>): IDbSet<T> {
+  fromSpecification(spec: ISpecification<T>): IQueryable<T, T> {
     this._baseSpec.extend(spec);
     this._baseSpec.applySelector(spec.getSelector());
     this._baseSpec.applyOrderBy(spec.getOrderBy());
@@ -271,19 +268,12 @@ export class DbSet<T extends object = any, E = DeepPartial<T> | T>
   private async execute<TResult>(type: QueryType): Promise<TResult> {
     if (!this._onGoingPromise || (await this._onGoingPromise)) {
       const res = (await this.context.execute(
-        this,
+        this as any,
         type,
         this._ignoreFilters
       )) as TResult;
       this._baseSpec.clearSpecs();
       return res;
     }
-  }
-
-  then<TResult1 = T[], TResult2 = never>(
-    onfulfilled?: (value: T[]) => TResult1 | PromiseLike<TResult1>,
-    onrejected?: (reason: any) => TResult2 | PromiseLike<TResult2>
-  ): PromiseLike<TResult1 | TResult2> {
-    return this.toList().then(onfulfilled, onrejected);
   }
 }

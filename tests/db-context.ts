@@ -8,7 +8,7 @@ import {
   DbSetEntity,
   IDbSet,
   SQLQuerySpecificationEvaluator
-} from '../lib/index';
+} from '../lib';
 import { IDbContextOptionsBuilder } from '../lib/uow/interfaces';
 import { DbContextModelBuilder } from '../lib/uow/model-builder';
 import { Agency } from './entities/agency';
@@ -62,11 +62,11 @@ export class FakeDBContext extends DbContext {
   }
 
   @DbSetEntity(Person)
-  public readonly persons: IDbSet<Person>;
+  public readonly persons: IDbSet<Person, Person>;
 
   @DbSetEntity(Agency)
-  public readonly agencies: IDbSet<Agency>;
+  public readonly agencies: IDbSet<Agency, Agency>;
 
   @DbSetEntity(Trip)
-  public readonly trips: IDbSet<Trip>;
+  public readonly trips: IDbSet<Trip, Trip>;
 }
