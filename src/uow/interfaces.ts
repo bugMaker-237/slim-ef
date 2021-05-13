@@ -65,7 +65,7 @@ export interface IDbContext {
    * This method will automatically call DetectChanges() to discover any changes to
    * entity instances before saving to the underlying database.
    */
-  saveChanges(): void;
+  saveChanges(): Promise<ISavedTransaction>;
   /**
    * Releases the allocated resources for this context.
    */
