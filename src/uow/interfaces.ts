@@ -66,6 +66,7 @@ export interface IDbContext {
    * entity instances before saving to the underlying database.
    */
   saveChanges(): Promise<ISavedTransaction>;
+  saveChanges(withoutRefresh: boolean): Promise<ISavedTransaction>;
   /**
    * Releases the allocated resources for this context.
    */

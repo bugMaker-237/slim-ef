@@ -130,7 +130,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
         await this._queryRunner.rollbackTransaction();
       throw e;
     } finally {
-      this._queryRunner.release();
+      if (!this._queryRunner.isReleased) this._queryRunner.release();
       this._dispose();
     }
   }
