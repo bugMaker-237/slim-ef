@@ -2,7 +2,7 @@ import { SelectQueryBuilder } from 'typeorm';
 import { IDbSet } from '../repository';
 
 export type IUnitOfWork = IDbContext;
-export interface IDbContext {
+export interface  IDbContext {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
    * already being tracked, in the Added state such that they will be inserted

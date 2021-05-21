@@ -385,7 +385,8 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       content.methodName in SQLArrayFunctions
     ) {
       func = SQLArrayFunctions[content.methodName];
-      sqlPart = format(func, propName, content.primitiveValue.toString());
+      const tb = (content.primitiveValue as []).map(v => `'${v}'`);
+      sqlPart = format(func, propName, tb.toString());
       return {
         topLevelSequence: [{ toApply, queryStr: sqlPart }],
         initialToApply: toApply
