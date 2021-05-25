@@ -48,7 +48,7 @@ export const SQLStringFunctions = {
 };
 
 export const SQLArrayFunctions = {
-  includes: 'IN ({0})'
+  includes: '{0} IN ({1})'
 };
 
 export const SQLJoinFunctions = {
