@@ -1,9 +1,12 @@
 import { SlimExpressionFunction } from 'slim-exp';
 import { IQueryable, QueryRefiner } from '../repository';
-let ModelsFilterMap = new WeakMap<object, any[]>();
-const GlobalFilterKey = { undefined };
+const GlobalMapKey = {
+  name: Symbol('GlobalMapKey')
+};
+
 export class DbContextModelBuilder<I extends object = any> {
-  private _currentType: any = GlobalFilterKey;
+  private _modelsFilterMap = new WeakMap<object, any[]>();
+  private _currentType: any = void 0;
   entity<T extends object>(type: new () => T): DbContextModelBuilder<T> {
     this._currentType = type;
     return this as any;
@@ -11,33 +14,39 @@ export class DbContextModelBuilder<I extends object = any> {
 
   hasQueryFilter(query: QueryRefiner<I>): DbContextModelBuilder<I> {
     let expMap = [];
-    if (ModelsFilterMap.has(this._currentType)) {
-      expMap = ModelsFilterMap.get(this._currentType);
+    if (this._modelsFilterMap.has(this._currentType)) {
+      expMap = this._modelsFilterMap.get(this._currentType);
     }
     expMap.push(query);
-    ModelsFilterMap.delete(this._currentType);
-    ModelsFilterMap.set(this._currentType, expMap);
-    this._currentType = GlobalFilterKey;
+    this._modelsFilterMap.delete(this._currentType);
+    this._modelsFilterMap.set(this._currentType, expMap);
+    this._currentType = void 0;
     return this;
   }
 
+  hasGlobalQueryFilter<R extends object = any>(query: QueryRefiner<R>) {
+    const oldType = this._currentType;
+    this._currentType = GlobalMapKey;
+    this.hasQueryFilter(query as QueryRefiner<any>);
+    this._currentType = oldType;
+  }
   resetAllFilters(): void {
-    this._currentType = GlobalFilterKey;
-    ModelsFilterMap = new WeakMap();
+    this._currentType = void 0;
+    this._modelsFilterMap = new WeakMap();
   }
 
   resetFilterFor<T>(type: new () => T): void {
-    ModelsFilterMap.delete(this._currentType);
-    this._currentType = GlobalFilterKey;
+    this._modelsFilterMap.delete(this._currentType);
+    this._currentType = void 0;
   }
 
   getFilters(type: any): SlimExpressionFunction<I>[] {
     const filters = [];
-    if (ModelsFilterMap.has(type)) {
-      filters.push(...ModelsFilterMap.get(type));
+    if (this._modelsFilterMap.has(type)) {
+      filters.push(...this._modelsFilterMap.get(type));
     }
-    if (ModelsFilterMap.has(GlobalFilterKey)) {
-      filters.push(...ModelsFilterMap.get(GlobalFilterKey));
+    if (this._modelsFilterMap.has(GlobalMapKey)) {
+      filters.push(...this._modelsFilterMap.get(GlobalMapKey));
     }
     return filters;
   }

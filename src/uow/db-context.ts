@@ -95,8 +95,11 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     await this._tryOpenConnection();
     const repo = this._getRepository(type);
     if (repo) {
-      return (await repo.findOne(id)) as T;
+      const res = (await repo.findOne(id)) as T;
+      await this._tryCloseConenction();
+      return res;
     }
+    await this._tryCloseConenction();
     return void 0;
   }
 
@@ -136,9 +139,11 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   }
 
   public async query(query: string, parameters: any[]): Promise<any> {
-    return this._connection.query(query, parameters);
+    await this._tryOpenConnection();
+    const result = await this._connection.query(query, parameters);
+    await this._tryCloseConenction();
+    return result;
   }
-
   //#region IInternalDbContext Implementation
   public async execute<T extends object, R = T[]>(
     queryable: IInternalDbSet<T>,
@@ -162,25 +167,36 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     );
     const logger = this._optionsBuilder.createLogger('query');
     logger?.log('info', await specEval.getQuery());
-    return await specEval.executeQuery(type);
+    logger?.log('info', await specEval.getParams());
+    const result = await specEval.executeQuery<R, R>(type);
+
+    await this._tryCloseConenction();
+
+    return result;
   }
 
   public async getMetadata<T>(
     type: new (...args: any[]) => T
   ): Promise<ProxyMetaDataInstance<T>> {
     await this._tryOpenConnection();
-    return getMetaData(this._connection, type);
+    const md = getMetaData(this._connection, type);
+    await this._tryCloseConenction();
+    return md;
   }
 
   //#endregion
   public dispose(): void {
     this._dispose();
-    this._connection.close();
+    this._tryCloseConenction();
   }
 
   //#region Private methods
   private async _tryOpenConnection() {
     if (!this._connection.isConnected) await this._connection.connect();
+  }
+
+  private async _tryCloseConenction() {
+    if (this._connection.isConnected) await this._connection.close();
   }
 
   private _dispose() {

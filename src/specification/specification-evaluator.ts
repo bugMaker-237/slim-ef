@@ -332,6 +332,8 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         queryParams[paramName] =
           rhs.propertyType === PrimitiveTypes.date
             ? this._polyfillDate(rhs.propertyValue)
+            : rhs.propertyType === PrimitiveTypes.number
+            ? rhs.propertyValue.toString()
             : rhs.propertyValue;
       } else {
         queryStr += ` ${
@@ -441,6 +443,9 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     return paramName + '_' + ++this._discriminator;
   }
 
+  public getParams() {
+    return this._query.getParameters();
+  }
   public getQuery<R extends object>(): Promise<string> {
     return new Promise((res, rej) => {
       try {

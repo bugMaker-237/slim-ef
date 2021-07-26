@@ -133,15 +133,15 @@ export class DbSet<
     this._baseSpec.addCriteria(predicate, context);
     return (this as unknown) as IQueryable<T, R, P>;
   }
-  take(count: number) {
+  take(count: number): IQueryable<T, R, P> {
     this._baseSpec.applyPaging(this._currentSkip, count);
     this._currentTake = count;
     return this as IQueryable<T, R, P>;
   }
-  skip(count: number) {
+  skip(count: number): IQueryable<T, R, P> {
     this._baseSpec.applyPaging(count, this._currentTake);
     this._currentSkip = count;
-    return this;
+    return this as IQueryable<T, R, P>;
   }
 
   select<V extends object>(selector: SlimExpressionFunction<T, V>) {

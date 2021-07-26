@@ -57,4 +57,5 @@ export declare class IQuerySpecificationEvaluator<T = any> {
   );
   executeQuery<R = T, Q = R[]>(type: QueryType): Promise<Q>;
   getQuery(): Promise<string> | string;
+  getParams(): Promise<any> | any;
 }

@@ -77,7 +77,7 @@ describe('Simple LINQ', () => {
     expect(persons.length).toBeGreaterThanOrEqual(41);
   });
 
-  it('Should have 41 persons traveling (!!)', async () => {
+  it('Should have 41 persons traveling (Double-Exclamation)', async () => {
     // Arrange
     const context = new FakeDBContext();
 
