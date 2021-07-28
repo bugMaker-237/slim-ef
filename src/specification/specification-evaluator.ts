@@ -443,7 +443,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     return paramName + '_' + ++this._discriminator;
   }
 
-  public getParams() {
+  public getParams(): any {
     return this._query.getParameters();
   }
   public getQuery<R extends object>(): Promise<string> {
