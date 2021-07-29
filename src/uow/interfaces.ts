@@ -70,6 +70,21 @@ export interface IDbContext {
    * Releases the allocated resources for this context.
    */
   dispose(): void;
+
+  /**
+   * Starts transaction.
+   */
+  openTransaction(): Promise<void>;
+
+  /**
+   * Commits transaction.
+   */
+  commitTransaction(): Promise<void>;
+
+  /**
+   * Ends transaction.
+   */
+  rollbackTransaction(): Promise<void>;
 }
 
 export type QueryInitializer<T> = (alias: string) => SelectQueryBuilder<T>;

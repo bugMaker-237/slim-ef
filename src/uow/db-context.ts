@@ -29,9 +29,10 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   private _new: IEntity[] = [];
   private _dirty: IEntity[] = [];
   private _deleted: IEntity[] = [];
-  private _queryRunner: QueryRunner;
+  private _queryRunner: QueryRunner | null;
   private _modelBuilder: DbContextModelBuilder<any>;
   private _optionsBuilder: DbContextOptionsBuilder;
+  private _isUserTransaction: boolean;
 
   constructor(
     protected _connection: Connection,
@@ -117,7 +118,8 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   public async saveChanges(): Promise<ISavedTransaction>;
   public async saveChanges(withoutRefresh = false): Promise<ISavedTransaction> {
     await this._tryOpenConnection();
-    this._queryRunner = this._connection.createQueryRunner();
+    this._queryRunner =
+      this._queryRunner || this._connection.createQueryRunner();
     await this._queryRunner.startTransaction();
     try {
       const added = await this._commitNew();
@@ -129,12 +131,43 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
         : await this._getUpdates(toUpdate);
       return { added, updated, deleted };
     } catch (e) {
-      if (this._queryRunner.isTransactionActive)
+      if (this._queryRunner.isTransactionActive && !this._isUserTransaction)
         await this._queryRunner.rollbackTransaction();
       throw e;
     } finally {
-      if (!this._queryRunner.isReleased) this._queryRunner.release();
+      if (!this._queryRunner.isReleased && !this._isUserTransaction)
+        this._queryRunner.release();
       this._dispose();
+    }
+  }
+
+  public async openTransaction(): Promise<void> {
+    if (this._queryRunner && this._isUserTransaction) {
+      throw new Error(
+        'A transaction is already open, please release the later before opening a new one'
+      );
+    }
+    this._tryOpenConnection();
+    this._isUserTransaction = true;
+    this._queryRunner = this._connection.createQueryRunner();
+    await this._queryRunner.startTransaction();
+  }
+
+  public async commitTransaction(): Promise<void> {
+    if (this._queryRunner && this._isUserTransaction) {
+      await this._queryRunner.commitTransaction();
+      await this._queryRunner.release();
+      this._queryRunner = null;
+      this._isUserTransaction = false;
+    }
+  }
+
+  public async rollbackTransaction(): Promise<void> {
+    if (this._queryRunner && this._isUserTransaction) {
+      await this._queryRunner.rollbackTransaction();
+      await this._queryRunner.release();
+      this._queryRunner = null;
+      this._isUserTransaction = false;
     }
   }
 
@@ -170,7 +203,10 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     logger?.log('info', await specEval.getParams());
     const result = await specEval.executeQuery<R, R>(type);
 
-    await this._tryCloseConenction();
+    // CLosing the connection here prevents typeorm lazyloading.
+    // So commenting this, may be I will get e better solution for
+    // managing these resources
+    // await this._tryCloseConenction();
 
     return result;
   }
