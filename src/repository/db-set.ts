@@ -268,14 +268,17 @@ export class DbSet<
   private async execute<TResult>(type: QueryType): Promise<TResult> {
     if (!this._onGoingPromise || (await this._onGoingPromise)) {
       try {
-        return this.context.execute(
+        const res = await this.context.execute<T, TResult>(
           this as any,
           type,
           this._ignoreFilters
-        ) as Promise<TResult>;
-      } finally {
+        );
+        this._baseSpec.clearSpecs();
+        return res;
+      } catch (err) {
         // wrapping this in finally, to clear specs on failure or success
         this._baseSpec.clearSpecs();
+        throw err;
       }
     }
   }

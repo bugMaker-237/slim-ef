@@ -97,10 +97,8 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     const repo = this._getRepository(type);
     if (repo) {
       const res = (await repo.findOne(id)) as T;
-      await this._tryCloseConenction();
       return res;
     }
-    await this._tryCloseConenction();
     return void 0;
   }
 
@@ -118,43 +116,51 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   public async saveChanges(): Promise<ISavedTransaction>;
   public async saveChanges(withoutRefresh = false): Promise<ISavedTransaction> {
     await this._tryOpenConnection();
-    this._queryRunner =
-      this._queryRunner || this._connection.createQueryRunner();
-    await this._queryRunner.startTransaction();
+    const transIsOpened = this.transactionIsOpen();
+
+    if (!transIsOpened) {
+      this._queryRunner = this._connection.createQueryRunner();
+      await this._queryRunner.startTransaction();
+    }
     try {
       const added = await this._commitNew();
       const toUpdate = await this._commitDirty();
       const deleted = await this._commitDeleted();
-      await this._queryRunner.commitTransaction();
+
+      if (!transIsOpened) await this._queryRunner.commitTransaction();
+
       const updated = withoutRefresh
         ? toUpdate
         : await this._getUpdates(toUpdate);
       return { added, updated, deleted };
     } catch (e) {
-      if (this._queryRunner.isTransactionActive && !this._isUserTransaction)
-        await this._queryRunner.rollbackTransaction();
+      if (transIsOpened) await this._queryRunner.rollbackTransaction();
       throw e;
     } finally {
-      if (!this._queryRunner.isReleased && !this._isUserTransaction)
+      if (!this._queryRunner.isReleased && !transIsOpened)
         this._queryRunner.release();
       this._dispose();
     }
   }
 
+  public transactionIsOpen(): boolean {
+    return !!this._queryRunner?.isTransactionActive && this._isUserTransaction;
+  }
   public async openTransaction(): Promise<void> {
-    if (this._queryRunner && this._isUserTransaction) {
+    if (this.transactionIsOpen()) {
       throw new Error(
         'A transaction is already open, please release the later before opening a new one'
       );
     }
-    this._tryOpenConnection();
+    await this._tryOpenConnection();
     this._isUserTransaction = true;
     this._queryRunner = this._connection.createQueryRunner();
     await this._queryRunner.startTransaction();
   }
 
   public async commitTransaction(): Promise<void> {
-    if (this._queryRunner && this._isUserTransaction) {
+    if (this.transactionIsOpen()) {
+      await this._tryOpenConnection();
       await this._queryRunner.commitTransaction();
       await this._queryRunner.release();
       this._queryRunner = null;
@@ -163,7 +169,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   }
 
   public async rollbackTransaction(): Promise<void> {
-    if (this._queryRunner && this._isUserTransaction) {
+    if (this.transactionIsOpen()) {
       await this._queryRunner.rollbackTransaction();
       await this._queryRunner.release();
       this._queryRunner = null;
@@ -174,7 +180,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   public async query(query: string, parameters: any[]): Promise<any> {
     await this._tryOpenConnection();
     const result = await this._connection.query(query, parameters);
-    await this._tryCloseConenction();
+    // await this._tryCloseConenction();
     return result;
   }
   //#region IInternalDbContext Implementation
@@ -216,7 +222,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   ): Promise<ProxyMetaDataInstance<T>> {
     await this._tryOpenConnection();
     const md = getMetaData(this._connection, type);
-    await this._tryCloseConenction();
+    // await this._tryCloseConenction();
     return md;
   }
 

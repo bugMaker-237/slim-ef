@@ -85,6 +85,11 @@ export interface IDbContext {
    * Ends transaction.
    */
   rollbackTransaction(): Promise<void>;
+
+  /**
+   * Returns true if user-defined transaction is initialise
+   */
+  transactionIsOpen(): boolean;
 }
 
 export type QueryInitializer<T> = (alias: string) => SelectQueryBuilder<T>;
