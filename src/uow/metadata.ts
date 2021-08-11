@@ -77,37 +77,37 @@ function _getInstanceWithRelationsMetadata(
         ? `${basePropName}.${c.propertyName}`
         : c.propertyName
     };
-    const subType = new (c.type as any)();
-    if (c.isOneToMany) {
-      // handling one to many as array since the type in target is Array
-      const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
-      instance[c.propertyName] = arrProxy;
-      let meta: any = {};
-      const i = constructorChain.findIndex(o => o.constructor === c.type);
-      if (i < 0) {
+    const subType = new (c as any).type();
+    let meta = {};
+    const i = constructorChain.findIndex(o => o.constructor === c.type);
+    if (i >= 0) {
+      // cloning the object for it not to have same ref as others
+      meta = constructorChain[i];
+    } else {
+      if (c.isOneToMany) {
+        // handling one to many as array since the type in target is Array
+        const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
+        instance[c.propertyName] = arrProxy;
+
         meta = _getMetaData(
           con,
           c.type,
           constructorChain,
           toAssign.$$propertyName
         );
+
+        Object.assign(subType, toAssign, meta);
+        instance[c.propertyName].push(subType);
       } else {
-        // cloning the object for it not to have same ref as others
-        meta = constructorChain.find(o => o.constructor === c.type);
+        meta = _getMetaData(
+          con,
+          c.type,
+          constructorChain,
+          toAssign.$$propertyName
+        );
+        Object.assign(subType, toAssign, meta);
+        instance[c.propertyName] = subType;
       }
-      Object.assign(subType, toAssign, meta);
-
-      instance[c.propertyName].push(subType);
-    } else {
-      const meta = _getMetaData(
-        con,
-        c.type,
-        constructorChain,
-        toAssign.$$propertyName
-      );
-      Object.assign(subType, toAssign, meta);
-
-      instance[c.propertyName] = subType;
     }
   }
   return instance;

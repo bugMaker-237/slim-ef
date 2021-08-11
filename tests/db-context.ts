@@ -45,6 +45,7 @@ export class FakeDBContext extends DbContext {
     //   } as MysqlConnectionOptions),
     //   SQLQuerySpecificationEvaluator
     // );
+    return void 0;
   }
 
   protected onModelCreation<BaseType extends object = any>(
