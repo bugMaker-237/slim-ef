@@ -13,7 +13,7 @@ export type ExpressionResult = object | PrimitiveType;
 export type Includable<T> = T | T[];
 export type PrimitiveType = string | number | boolean;
 
-interface IQueryableSelectionResult<
+export interface IQueryableSelectionResult<
   V extends EntityBase,
   T extends EntityBase = any
 > {

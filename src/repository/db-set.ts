@@ -6,7 +6,13 @@ import {
 } from '../specification/specification.interface';
 import { ExpressionResult, SlimExpressionFunction } from 'slim-exp';
 import { IDbContext, IUnitOfWork } from '../uow';
-import { EntityBase, IDbSet, Includable, IQueryable } from './interfaces';
+import {
+  EntityBase,
+  IDbSet,
+  Includable,
+  IQueryable,
+  IQueryableSelectionResult
+} from './interfaces';
 import { DeepPartial } from 'typeorm';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
@@ -162,7 +168,7 @@ export class DbSet<
         throw new Error(rej);
       });
 
-    return this as any;
+    return (this as unknown) as IQueryableSelectionResult<V, R>;
   }
 
   private _extractKeyFields<V extends object>(
