@@ -26,6 +26,7 @@ function _getMetaData<T>(
   basePropName = ''
 ): ProxyMetaDataInstance<T> {
   const meta = con.getMetadata(type);
+  // TODO: find a way to better cache the constructor chain.
   return _getTypeMetaData(meta, type, con, constructorChain, basePropName);
 }
 
@@ -99,12 +100,6 @@ function _getInstanceWithRelationsMetadata(
       Object.assign(subType, toAssign, meta);
       instance[c.propertyName].push(subType);
     } else {
-      meta = _getMetaData(
-        con,
-        c.type,
-        constructorChain,
-        toAssign.$$propertyName
-      );
       Object.assign(subType, toAssign, meta);
       instance[c.propertyName] = subType;
     }
