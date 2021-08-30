@@ -135,7 +135,8 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     }
     if (!this.registerdAliases.includes(finalAlias))
       throw new SQLQuerySpecificationException(
-        "Condition added to where clause with a property that was not included in the query expression.Please use 'include' with/or 'thenInclude' to include desire entity"
+        "Condition added to where clause with a property that was not included in the query expression.Please use 'include' with/or 'thenInclude' to include desire entity: " +
+          finalAlias
       );
     return `${finalAlias}.${finalName}`;
   }
