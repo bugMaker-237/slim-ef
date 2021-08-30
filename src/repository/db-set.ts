@@ -152,8 +152,9 @@ export class DbSet<
 
   select<V extends object>(selector: SlimExpressionFunction<T, V>) {
     const thisType = this[UnderlyingType];
+    const includePaths = this._getIncludePaths();
     this._onGoingPromise = this.context
-      .getMetadata(thisType)
+      .getMetadata(thisType, includePaths)
       .then(proxyInstance => {
         const res = selector(proxyInstance as any) as ProxyMetaDataInstance<V>;
         const fieldsToSelect = this._extractKeyFields<V>(res);
@@ -165,10 +166,25 @@ export class DbSet<
         return true;
       })
       .catch(rej => {
-        throw new Error(rej);
+        if (
+          rej.message &&
+          rej.message.includes('Cannot read property') &&
+          rej.message.includes('of undefined')
+        ) {
+          throw new Error(
+            'Select proxy cannot be build. You may have forget to include some properties using `.include` or `.thenInclude`. Internal Error: ' +
+              rej.message
+          );
+        } else {
+          throw new Error(rej);
+        }
       });
 
     return (this as unknown) as IQueryableSelectionResult<V, R>;
+  }
+  private _getIncludePaths(): string[] {
+    const spec = this.asSpecification();
+    return spec.getIncludePaths();
   }
 
   private _extractKeyFields<V extends object>(
@@ -272,8 +288,8 @@ export class DbSet<
   }
 
   private async execute<TResult>(type: QueryType): Promise<TResult> {
-    if (!this._onGoingPromise || (await this._onGoingPromise)) {
-      try {
+    try {
+      if (!this._onGoingPromise || (await this._onGoingPromise)) {
         const res = await this.context.execute<T, TResult>(
           this as any,
           type,
@@ -281,11 +297,11 @@ export class DbSet<
         );
         this._baseSpec.clearSpecs();
         return res;
-      } catch (err) {
-        // wrapping this in finally, to clear specs on failure or success
-        this._baseSpec.clearSpecs();
-        throw err;
       }
+    } catch (err) {
+      // wrapping this in finally, to clear specs on failure or success
+      this._baseSpec.clearSpecs();
+      throw err;
     }
   }
 }

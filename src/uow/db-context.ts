@@ -218,10 +218,11 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   }
 
   public async getMetadata<T>(
-    type: new (...args: any[]) => T
+    type: new (...args: any[]) => T,
+    includePaths: string[]
   ): Promise<ProxyMetaDataInstance<T>> {
     await this._tryOpenConnection();
-    const md = getMetaData(this._connection, type);
+    const md = getMetaData(this._connection, type, includePaths);
     // await this._tryCloseConenction();
     return md;
   }

@@ -11,10 +11,11 @@ const map = new WeakMap();
 
 export function getMetaData<T>(
   con: Connection,
-  type: new (...args) => T
+  type: new (...args) => T,
+  includePaths: string[]
 ): ProxyMetaDataInstance<T> {
   if (map.has(type)) return map.get(type);
-  const meta = _getMetaData<T>(con, type);
+  const meta = _getMetaData<T>(con, type, [], '', includePaths);
   map.set(type, meta);
   return meta;
 }
@@ -23,11 +24,19 @@ function _getMetaData<T>(
   con: Connection,
   type: any,
   constructorChain = [],
-  basePropName = ''
+  basePropName = '',
+  includePaths: string[] = []
 ): ProxyMetaDataInstance<T> {
   const meta = con.getMetadata(type);
   // TODO: find a way to better cache the constructor chain.
-  return _getTypeMetaData(meta, type, con, constructorChain, basePropName);
+  return _getTypeMetaData(
+    meta,
+    type,
+    con,
+    constructorChain,
+    basePropName,
+    includePaths
+  );
 }
 
 function _getTypeMetaData<T = any>(
@@ -35,7 +44,8 @@ function _getTypeMetaData<T = any>(
   type: any,
   con: Connection,
   constructorChain: any[],
-  basePropName = ''
+  basePropName = '',
+  includePaths: string[] = []
 ): ProxyMetaDataInstance<T> {
   const index = constructorChain.find(o => o.constructor === type);
   if (index >= 0) {
@@ -50,7 +60,8 @@ function _getTypeMetaData<T = any>(
     instance,
     type,
     constructorChain,
-    basePropName
+    basePropName,
+    includePaths
   );
   return instance;
 }
@@ -61,7 +72,8 @@ function _getInstanceWithRelationsMetadata(
   previousInstance: any,
   type: any,
   constructorChain: any[],
-  basePropName = ''
+  basePropName = '',
+  includePaths: string[] = []
 ): ProxyMetaDataInstance<any> {
   const instance = new type();
 
@@ -79,35 +91,30 @@ function _getInstanceWithRelationsMetadata(
         : c.propertyName
     };
     const subType = new (c as any).type();
-    let meta = {};
+    let meta;
     const i = constructorChain.findIndex(o => o.constructor === c.type);
     if (i >= 0) {
-      // cloning the object for it not to have same ref as others
       meta = constructorChain[i];
-      Object.assign(subType, toAssign, meta);
-      instance[c.propertyName] = subType;
     } else {
+      if (includePaths.includes(toAssign.$$propertyName)) {
+        meta = _getMetaData(
+          con,
+          c.type,
+          constructorChain,
+          toAssign.$$propertyName,
+          includePaths
+        );
+      }
+    }
+    if (meta) {
       if (c.isOneToMany) {
         // handling one to many as array since the type in target is Array
         const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
         instance[c.propertyName] = arrProxy;
 
-        meta = _getMetaData(
-          con,
-          c.type,
-          constructorChain,
-          toAssign.$$propertyName
-        );
-
         Object.assign(subType, toAssign, meta);
         instance[c.propertyName].push(subType);
       } else {
-        meta = _getMetaData(
-          con,
-          c.type,
-          constructorChain,
-          toAssign.$$propertyName
-        );
         Object.assign(subType, toAssign, meta);
         instance[c.propertyName] = subType;
       }

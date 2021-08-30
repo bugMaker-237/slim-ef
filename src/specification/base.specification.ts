@@ -1,4 +1,8 @@
-import { ExpressionResult, SlimExpressionFunction } from 'slim-exp';
+import {
+  ExpressionResult,
+  SlimExpression,
+  SlimExpressionFunction
+} from 'slim-exp';
 import {
   ISpecification,
   FieldsSelector,
@@ -25,6 +29,19 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     func: SlimExpressionFunction<T>;
   };
 
+  getIncludePaths(): string[] {
+    const paths = this._includes.map(i => SlimExpression.nameOf(i));
+
+    const chainedPaths = this._chainedIncludes.map(ci => {
+      const nameOfInititial = SlimExpression.nameOf(ci.initial);
+      return ci.chain.reduce(
+        (p, c) => (p.push(`${p[p.length - 1]}.${SlimExpression.nameOf(c)}`), p),
+        [nameOfInititial]
+      );
+    });
+    paths.push(...chainedPaths.reduce((p, c) => (p.push(...c), p), []));
+    return paths;
+  }
   getIncludes(): SlimExpressionFunction<T>[] {
     return this._includes;
   }

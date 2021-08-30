@@ -19,6 +19,7 @@ export interface FieldsSelector<T, R extends object = any> {
 }
 
 export interface ISpecification<T = undefined> {
+  getIncludePaths(): string[];
   getIncludes(): SlimExpressionFunction<T>[];
   getCriterias(): CriteriaExpression<T>[];
   getChainedIncludes(): {

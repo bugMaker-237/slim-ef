@@ -13,7 +13,10 @@ export interface IInternalDbContext {
     type: QueryType,
     ignoreFilters?: boolean
   ): Promise<R>;
-  getMetadata<T>(type: new (...args) => T): Promise<ProxyMetaDataInstance<T>>;
+  getMetadata<T>(
+    type: new (...args) => T,
+    includePaths: string[]
+  ): Promise<ProxyMetaDataInstance<T>>;
 }
 
 export type ProxyMetaDataInstance<T> = {
