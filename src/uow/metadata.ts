@@ -14,10 +14,11 @@ export function getMetaData<T>(
   type: new (...args) => T,
   includePaths: string[]
 ): ProxyMetaDataInstance<T> {
-  if (map.has(type)) return map.get(type);
-  const meta = _getMetaData<T>(con, type, [], '', includePaths);
-  map.set(type, meta);
-  return meta;
+  // if (map.has(type)) return map.get(type);
+  // const meta = _getMetaData<T>(con, type, [], '', includePaths);
+  // map.set(type, meta);
+  // TODO: Find a way to cache this with the include paths
+  return _getMetaData<T>(con, type, [], '', includePaths);
 }
 
 function _getMetaData<T>(
