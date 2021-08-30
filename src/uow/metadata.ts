@@ -84,24 +84,33 @@ function _getInstanceWithRelationsMetadata(
     if (i >= 0) {
       // cloning the object for it not to have same ref as others
       meta = constructorChain[i];
-    } else {
-      meta = _getMetaData(
-        con,
-        c.type,
-        constructorChain,
-        toAssign.$$propertyName
-      );
-    }
-    if (c.isOneToMany) {
-      // handling one to many as array since the type in target is Array
-      const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
-      instance[c.propertyName] = arrProxy;
-
-      Object.assign(subType, toAssign, meta);
-      instance[c.propertyName].push(subType);
-    } else {
       Object.assign(subType, toAssign, meta);
       instance[c.propertyName] = subType;
+    } else {
+      if (c.isOneToMany) {
+        // handling one to many as array since the type in target is Array
+        const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
+        instance[c.propertyName] = arrProxy;
+
+        meta = _getMetaData(
+          con,
+          c.type,
+          constructorChain,
+          toAssign.$$propertyName
+        );
+
+        Object.assign(subType, toAssign, meta);
+        instance[c.propertyName].push(subType);
+      } else {
+        meta = _getMetaData(
+          con,
+          c.type,
+          constructorChain,
+          toAssign.$$propertyName
+        );
+        Object.assign(subType, toAssign, meta);
+        instance[c.propertyName] = subType;
+      }
     }
   }
   return instance;
