@@ -222,3 +222,19 @@ export interface IDbSet<
   ignoreQueryFilters(): IQueryable<T, R, P>;
   // join(queryable: this): this; ??
 }
+declare global {
+  interface String {
+    /**
+     * Returns true if one of the searchString appears in the result
+     * @param searchString search string
+     */
+    includes(searchStrings: string[]): boolean;
+  }
+  interface Number {
+    /**
+     * Returns true if one of the searchNumbers appears in the result
+     * @param searchString search string
+     */
+    includes(searchNumbers: number[]): boolean;
+  }
+}

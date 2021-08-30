@@ -11,7 +11,7 @@ const map = new WeakMap();
 
 export function getMetaData<T>(
   con: Connection,
-  type: new (...args) => T
+  type: new (...args: any[]) => T
 ): ProxyMetaDataInstance<T> {
   if (map.has(type)) return map.get(type);
   const meta = _getMetaData<T>(con, type);
@@ -22,24 +22,20 @@ export function getMetaData<T>(
 function _getMetaData<T>(
   con: Connection,
   type: any,
-  constructorChain = [],
   basePropName = ''
 ): ProxyMetaDataInstance<T> {
   const meta = con.getMetadata(type);
-  return _getTypeMetaData(meta, type, con, constructorChain, basePropName);
+  return _getTypeMetaData(meta, type, con, basePropName);
 }
 
 function _getTypeMetaData<T = any>(
   meta: EntityMetadata,
   type: any,
   con: Connection,
-  constructorChain: any[],
   basePropName = ''
 ): ProxyMetaDataInstance<T> {
-  const index = constructorChain.find(o => o.constructor === type);
-  if (index >= 0) {
-    const proxy = constructorChain[index];
-    return proxy;
+  if (map.has(type)) {
+    return map.get(type);
   }
   let instance = _getInstanceWithColumnsMetadata(meta, type, basePropName);
 
@@ -48,7 +44,6 @@ function _getTypeMetaData<T = any>(
     meta,
     instance,
     type,
-    constructorChain,
     basePropName
   );
   return instance;
@@ -59,17 +54,15 @@ function _getInstanceWithRelationsMetadata(
   metaData: EntityMetadata,
   previousInstance: any,
   type: any,
-  constructorChain: any[],
   basePropName = ''
 ): ProxyMetaDataInstance<any> {
   const instance = new type();
 
   Object.assign(instance, previousInstance);
 
-  if (constructorChain.findIndex(o => o.constructor === type) < 0)
-    constructorChain.push(instance);
+  if (!map.has(type)) map.set(type, instance);
 
-  let toAssign;
+  let toAssign: { $$propertyName: string };
 
   for (const c of metaData.relations) {
     toAssign = {
@@ -79,35 +72,24 @@ function _getInstanceWithRelationsMetadata(
     };
     const subType = new (c as any).type();
     let meta = {};
-    const i = constructorChain.findIndex(o => o.constructor === c.type);
-    if (i >= 0) {
-      // cloning the object for it not to have same ref as others
-      meta = constructorChain[i];
+
+    if (map.has(type)) {
+      meta = map.get(type);
     } else {
-      if (c.isOneToMany) {
-        // handling one to many as array since the type in target is Array
-        const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
-        instance[c.propertyName] = arrProxy;
+      meta = _getMetaData(con, c.type, toAssign.$$propertyName);
+    }
 
-        meta = _getMetaData(
-          con,
-          c.type,
-          constructorChain,
-          toAssign.$$propertyName
-        );
+    if (c.isOneToMany) {
+      // handling one to many as array since the type in target is Array
+      const arrProxy = new SelectArrayProxy(toAssign.$$propertyName);
+      instance[c.propertyName] = arrProxy;
 
-        Object.assign(subType, toAssign, meta);
-        instance[c.propertyName].push(subType);
-      } else {
-        meta = _getMetaData(
-          con,
-          c.type,
-          constructorChain,
-          toAssign.$$propertyName
-        );
-        Object.assign(subType, toAssign, meta);
-        instance[c.propertyName] = subType;
-      }
+      Object.assign(subType, toAssign, meta);
+      instance[c.propertyName].push(subType);
+    } else {
+      meta = _getMetaData(con, c.type, toAssign.$$propertyName);
+      Object.assign(subType, toAssign, meta);
+      instance[c.propertyName] = subType;
     }
   }
   return instance;
