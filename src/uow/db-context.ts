@@ -1,4 +1,4 @@
-import { Connection, QueryRunner, Repository } from 'typeorm';
+import { BaseEntity, Connection, QueryRunner, Repository } from 'typeorm';
 import { getEntitySchema, getEntitySet, getEntitySetKeys } from '../repository';
 import { DbSet, UnderlyingType } from '../repository/db-set';
 import { IDbSet, IQueryable } from '../repository/interfaces';
@@ -182,6 +182,14 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     const result = await this._connection.query(query, parameters);
     // await this._tryCloseConenction();
     return result;
+  }
+
+  public loadRelatedData<T extends IEntity>(
+    type: new (...args: []) => T,
+    entity: T
+  ): Promise<T> {
+    const manager = this._connection.manager;
+    return manager.preload(type, entity);
   }
   //#region IInternalDbContext Implementation
   public async execute<T extends object, R = T[]>(

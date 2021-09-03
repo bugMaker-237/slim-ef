@@ -28,6 +28,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     type: FunctionQueryType;
     func: SlimExpressionFunction<T>;
   };
+  private _initializeThenInclude: boolean;
 
   getIncludePaths(): string[] {
     const paths = this._includes.map(i => SlimExpression.nameOf(i));
@@ -88,7 +89,10 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     this._isPagingEnabled = true;
   }
   addInclude(include: SlimExpressionFunction<T>) {
-    if (include) this._includes.push(include);
+    if (include) {
+      this._includes.push(include);
+      this._initializeThenInclude = true;
+    }
   }
 
   addChainedInclude<S extends object>(
@@ -136,7 +140,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     const i = this._chainedIncludes.find(
       val => val.initial.toString() === include.toString()
     );
-    if (i) {
+    if (i && !this._initializeThenInclude) {
       chain.forEach(c => {
         if (!i.chain.find(v => v.toString() === c.toString())) {
           i.chain.push(c);
@@ -147,6 +151,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
         initial: include,
         chain
       });
+      this._initializeThenInclude = false;
     }
   }
 

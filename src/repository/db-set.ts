@@ -81,6 +81,9 @@ export class DbSet<
     return !!(await this.find(id));
   }
 
+  loadRelatedData(entity: T): Promise<T> {
+    return this.context.loadRelatedData(this._underlyingType, entity);
+  }
   async firstOrDefault(): Promise<T>;
   async firstOrDefault<C extends object>(
     predicate: SlimExpressionFunction<T, boolean, C>,
@@ -194,12 +197,28 @@ export class DbSet<
   }[] {
     const fieldsToSelect = [];
     for (const k in res) {
-      if (Object.prototype.hasOwnProperty.call(res, k)) {
+      if (
+        k !== '$$propertyName' &&
+        Object.prototype.hasOwnProperty.call(res, k)
+      ) {
         const element = res[k];
         if (!Array.isArray(element)) {
-          fieldsToSelect.push({
-            field: element.$$propertyName
-          });
+          if (
+            !(element instanceof String) &&
+            !(element instanceof Number) &&
+            !(element instanceof Boolean) &&
+            element instanceof Object
+          ) {
+            fieldsToSelect.push(
+              ...this._extractKeyFields(element).map(e => ({
+                field: `${e.field}`
+              }))
+            );
+          } else {
+            fieldsToSelect.push({
+              field: element.$$propertyName
+            });
+          }
         } else {
           const arrElt = element[0];
           fieldsToSelect.push(

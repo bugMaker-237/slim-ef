@@ -90,6 +90,13 @@ export interface IDbContext {
    * Returns true if user-defined transaction is initialise
    */
   transactionIsOpen(): boolean;
+
+  /**
+   * Creates a new entity from the given plain javascript object. If the entity already exist in the database, then it loads it (and everything related to it), replaces all values with the new ones from the given object, and returns the new entity. The new entity is actually loaded from the database entity with all properties replaced from the new object.
+   * @param type The type of the enity to load
+   * @param entity The partial entity values
+   */
+  loadRelatedData<T>(type: new (...args: []) => T, entity: T): Promise<T>;
 }
 
 export type QueryInitializer<T> = (alias: string) => SelectQueryBuilder<T>;

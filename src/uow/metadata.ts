@@ -94,10 +94,10 @@ function _getInstanceWithRelationsMetadata(
     const subType = new (c as any).type();
     let meta;
     const i = constructorChain.findIndex(o => o.constructor === c.type);
-    if (i >= 0) {
-      meta = constructorChain[i];
-    } else {
-      if (includePaths.includes(toAssign.$$propertyName)) {
+    if (includePaths.includes(toAssign.$$propertyName)) {
+      if (i >= 0) {
+        meta = constructorChain[i];
+      } else {
         meta = _getMetaData(
           con,
           c.type,
