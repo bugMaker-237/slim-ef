@@ -203,16 +203,14 @@ export class DbSet<
       ) {
         const element = res[k];
         if (!Array.isArray(element)) {
-          if (
+          const canGrind =
             !(element instanceof String) &&
             !(element instanceof Number) &&
             !(element instanceof Boolean) &&
-            element instanceof Object
-          ) {
+            element instanceof Object;
+          if (canGrind) {
             fieldsToSelect.push(
-              ...this._extractKeyFields(
-                element as ProxyMetaDataInstance<V>
-              ).map(e => ({
+              ...this._extractKeyFields(element as any).map(e => ({
                 field: `${e.field}`
               }))
             );
