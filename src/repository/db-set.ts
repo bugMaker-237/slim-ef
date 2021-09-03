@@ -210,7 +210,9 @@ export class DbSet<
             element instanceof Object
           ) {
             fieldsToSelect.push(
-              ...this._extractKeyFields(element).map(e => ({
+              ...this._extractKeyFields(
+                element as ProxyMetaDataInstance<V>
+              ).map(e => ({
                 field: `${e.field}`
               }))
             );
