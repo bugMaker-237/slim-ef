@@ -405,8 +405,8 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       contextNamesAndalias.set(initialExpObjectName, initialAlias);
       do {
         // trying to get the property name on which the function is called
-        // i.e t => t.tickets.filter(...), we have to get 'tickets'
-        // but since .propertyName attribute gives 'filter' we
+        // i.e t => t.tickets.some(...), we have to get 'tickets'
+        // but since .propertyName attribute gives 'some' we
         // have to go up the propertytree
         // LHS.propertyTree[LHS.propertyTree.length - 2]
         const { entityAlias } = this._getFieldNameAndAlias(
@@ -424,6 +424,25 @@ export class SQLQuerySpecificationEvaluator<T extends object>
               toApply,
               null,
               isInBracketGroup ? 'active' : 'inactive'
+            );
+          } else if (
+            exp.leftHandSide &&
+            exp.leftHandSide.isMethod &&
+            !exp.leftHandSide.content.isExpression
+          ) {
+            const propTree = exp.leftHandSide.propertyName.split('.');
+            propTree.pop();
+            const field = this._getFieldFromRegisteredAlias(
+              alias,
+              propTree.join('.')
+            );
+            return this._handleFunctionInvokation(
+              field,
+              entityAlias,
+              exp.expObjectName,
+              exp.leftHandSide,
+              toApply,
+              false
             );
           }
         }

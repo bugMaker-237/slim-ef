@@ -334,7 +334,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     if (this._entitySets.has(type)) return this._entitySets.get(type);
     if (!schema)
       throw new Error(
-        'Schema not found. You may not have set EntityRepository decorator correctly'
+        `Schema [${type?.constructor?.name}] not found. You may not have set EntityRepository decorator correctly`
       );
     const repo = this._connection.getRepository<any>(schema);
     this._entitySets.set(type, repo);

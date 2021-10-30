@@ -175,7 +175,7 @@ export class DbSet<
           rej.message.includes('of undefined')
         ) {
           throw new Error(
-            'Select proxy cannot be build. You may have forget to include some properties using `.include` or `.thenInclude`. Internal Error: ' +
+            'Select proxy cannot be build. You may have forget to include some properties using `.include` or `.thenInclude` or may be the selected property is not part of the entity schema. Internal Error: ' +
               rej.message
           );
         } else {

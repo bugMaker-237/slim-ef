@@ -15,7 +15,7 @@ export type PrimitiveType = string | number | boolean;
 
 export interface IQueryableSelectionResult<
   V extends EntityBase,
-  T extends EntityBase = any
+  T extends EntityBase = V
 > {
   /**
    * Asynchronously returns the first element of the sequence
