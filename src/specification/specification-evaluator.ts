@@ -45,6 +45,7 @@ type Sequence<T> = {
   queryParams?: Record<string, any>;
 };
 type QuerySequence<T> = {
+  firstSequence?: 'brackets' | 'topLevel';
   topLevelSequence: Sequence<T>[];
   bracketSequence?: QuerySequence<T>[];
   initialToApply: WhereQuery<T>;
@@ -64,8 +65,6 @@ export class SQLQuerySpecificationEvaluator<T extends object>
   ) {
     this._queryReady = false;
   }
-
-  private;
 
   _applyLeftJoin(
     query: SelectQueryBuilder<T>,
@@ -187,14 +186,27 @@ export class SQLQuerySpecificationEvaluator<T extends object>
   ) {
     const first = querySequence;
 
-    for (const s of first.topLevelSequence) {
-      s.toApply.call(sqlQuery, s.queryStr, s.queryParams);
-    }
-    for (const b of first.bracketSequence) {
-      const brackets = new Brackets(wh => {
-        this._applyRecursively(wh, b);
-      });
-      b.initialToApply.call(sqlQuery, brackets);
+    const callBrackets = () => {
+      for (const b of first.bracketSequence) {
+        const brackets = new Brackets(wh => {
+          this._applyRecursively(wh, b);
+        });
+        b.initialToApply.call(sqlQuery, brackets);
+      }
+    };
+
+    const callTopLevel = () => {
+      for (const s of first.topLevelSequence) {
+        s.toApply.call(sqlQuery, s.queryStr, s.queryParams);
+      }
+    };
+
+    if (first.firstSequence === 'brackets') {
+      callBrackets();
+      callTopLevel();
+    } else {
+      callTopLevel();
+      callBrackets();
     }
   }
 
@@ -227,6 +239,9 @@ export class SQLQuerySpecificationEvaluator<T extends object>
             'active'
           )
         );
+        if (!querySequence.firstSequence) {
+          querySequence.firstSequence = 'brackets';
+        }
       }
 
       if (e.computeHash() === closingExp?.computeHash()) {
@@ -242,6 +257,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         toApply,
         setupBrackets !== 'inactive'
       );
+
+      if (!querySequence.firstSequence) {
+        querySequence.firstSequence = 'topLevel';
+      }
       querySequence.topLevelSequence.push(
         ...(sequence.topLevelSequence.filter(s => !!s.queryStr) || [])
       );

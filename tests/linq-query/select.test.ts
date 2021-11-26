@@ -89,4 +89,41 @@ describe('Select test', () => {
     expect(res.length).toEqual(35);
     expect(res[0].passengers).toBeDefined();
   });
+
+  it('Should filter and create instance of response with values handling bracket in correct order', async () => {
+    const context = new FakeDBContext();
+    const ctx = {
+      departureDate: new Date(2000, 1, 1),
+      estimatedArrivalDate: new Date(2016, 1, 1)
+    };
+
+    const tripsQuery = context.trips
+      .include(t => t.agency)
+      .include(t => t.passengers)
+      .where(
+        (t, $) =>
+          (t.estimatedArrivalDate < $.estimatedArrivalDate ||
+            t.passengers.some(p => p.willTravel === true)) &&
+          t.departureDate > $.departureDate,
+        ctx
+      )
+      .select(
+        t =>
+          new TripResponse(
+            t.agency.name,
+            t.agency.email,
+            t.departureDate,
+            t.passengers.map(p => ({
+              name: p.lastname,
+              phone: p.phone,
+              ID: p.IDNumber
+            }))
+          )
+      );
+
+    const res = await tripsQuery.toList();
+
+    expect(res.length).toEqual(35);
+    expect(res[0].passengers).toBeDefined();
+  });
 });
