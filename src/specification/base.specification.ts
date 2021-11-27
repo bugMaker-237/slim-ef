@@ -137,9 +137,11 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
       v => v.toString() !== include.toString()
     );
 
-    const i = this._chainedIncludes.find(
-      val => val.initial.toString() === include.toString()
-    );
+    const lastIndex = this._chainedIncludes
+      .map(val => val.initial.toString().trim())
+      .lastIndexOf(include.toString().trim());
+    const i = this._chainedIncludes[lastIndex];
+
     if (i && !this._initializeThenInclude) {
       chain.forEach(c => {
         if (!i.chain.find(v => v.toString() === c.toString())) {
