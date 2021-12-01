@@ -49,6 +49,10 @@ export interface IQueryableSelectionResult<
    * Asynchronously creates aa `Array` of result from `IQueryable` by enumerating it asynchronously.
    */
   toList(): Promise<V[]>;
+  /**
+   * Applies distinct selection on projection
+   */
+  distinct(): this;
 }
 
 export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
@@ -158,6 +162,17 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    * @param keySelector
    */
   thenOrderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+  /**
+   *  Groups the elements of a sequence according to a key.
+   * @param keySelector A function to extract a key from an element.
+   */
+  groupBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+
+  /**
+   * Performs a subsequent grouping of the elements in a sequence
+   * @param keySelector
+   */
+  thenGroupBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
 
   /**
    * Sorts the elements of a sequence in ascending order according to a key.

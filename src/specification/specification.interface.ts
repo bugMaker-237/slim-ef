@@ -21,6 +21,7 @@ export interface FieldsSelector<T, R extends object = any> {
 export interface ISpecification<T = undefined> {
   getIncludePaths(): string[];
   getIncludes(): SlimExpressionFunction<T>[];
+  getDistinct(): boolean;
   getCriterias(): CriteriaExpression<T>[];
   getChainedIncludes(): {
     initial: SlimExpressionFunction<T>;
@@ -28,12 +29,14 @@ export interface ISpecification<T = undefined> {
   }[];
 
   getOrderBy(): SlimExpressionFunction<T>;
+  getGroupBy(): SlimExpressionFunction<T>;
   getFunction(): {
     type: FunctionQueryType;
     func: SlimExpressionFunction<T>;
   };
   getOrderByDescending(): SlimExpressionFunction<T>;
-  getThenBy(): SlimExpressionFunction<T>;
+  getThenGroupBy(): SlimExpressionFunction<T>[];
+  getThenOrderBy(): SlimExpressionFunction<T>[];
   getTake(): number;
   getSkip(): number;
   getIsPagingEnabled(): boolean;

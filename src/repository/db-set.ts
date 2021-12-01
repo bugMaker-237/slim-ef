@@ -279,6 +279,16 @@ export class DbSet<
     return this as IQueryable<T, R, P>;
   }
 
+  groupBy(keySelector: SlimExpressionFunction<T>) {
+    this._baseSpec.applyGroupBy(keySelector);
+    return this as IQueryable<T, R, P>;
+  }
+
+  thenGroupBy(keySelector: SlimExpressionFunction<T>) {
+    this._baseSpec.applyThenGroupBy(keySelector);
+    return this as IQueryable<T, R, P>;
+  }
+
   orderByDescending(keySelector: SlimExpressionFunction<T>) {
     this._baseSpec.applyOrderByDescending(keySelector);
     return this as IQueryable<T, R, P>;
@@ -292,13 +302,16 @@ export class DbSet<
     this._ignoreFilters = true;
     return this as IQueryable<T, R, P>;
   }
+  distinct() {
+    this._baseSpec.applyDistinct();
+    return this;
+  }
 
   fromSpecification(spec: ISpecification<T>): IQueryable<T, T> {
     this._baseSpec.extend(spec);
     this._baseSpec.applySelector(spec.getSelector());
     this._baseSpec.applyOrderBy(spec.getOrderBy());
     this._baseSpec.applyOrderByDescending(spec.getOrderByDescending());
-    this._baseSpec.applyThenOrderBy(spec.getThenBy());
     return this as any;
   }
 

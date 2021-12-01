@@ -12,14 +12,17 @@ import {
 
 export class BaseSpecification<T extends object> implements ISpecification<T> {
   private _includes: SlimExpressionFunction<T>[] = [];
+  private _distinct: boolean = false;
   private _chainedIncludes: {
     initial: SlimExpressionFunction<T>;
     chain: SlimExpressionFunction<any, any>[];
   }[] = [];
   private _criterias: CriteriaExpression<T>[] = [];
   private _orderBy: SlimExpressionFunction<T>;
+  private _groupBy: SlimExpressionFunction<T, any, any>;
   private _orderByDescending: SlimExpressionFunction<T>;
-  private _thenBy: SlimExpressionFunction<T>;
+  private _thenOrderBy: SlimExpressionFunction<T>[] = [];
+  private _thenGroupBy: SlimExpressionFunction<T, any, any>[] = [];
   private _take = 0;
   private _skip = 0;
   private _isPagingEnabled: boolean;
@@ -46,6 +49,9 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   getIncludes(): SlimExpressionFunction<T>[] {
     return this._includes;
   }
+  getDistinct(): boolean {
+    return this._distinct;
+  }
   getFunction(): {
     type: FunctionQueryType;
     func: SlimExpressionFunction<T>;
@@ -64,11 +70,17 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   getOrderBy(): SlimExpressionFunction<T> {
     return this._orderBy;
   }
+  getGroupBy(): SlimExpressionFunction<T> {
+    return this._groupBy;
+  }
   getOrderByDescending(): SlimExpressionFunction<T> {
     return this._orderByDescending;
   }
-  getThenBy(): SlimExpressionFunction<T> {
-    return this._thenBy;
+  getThenOrderBy(): SlimExpressionFunction<T>[] {
+    return this._thenOrderBy;
+  }
+  getThenGroupBy(): SlimExpressionFunction<T>[] {
+    return this._thenGroupBy;
   }
   getTake(): number {
     return this._take;
@@ -93,6 +105,9 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
       this._includes.push(include);
       this._initializeThenInclude = true;
     }
+  }
+  applyDistinct(distinct = true) {
+    this._distinct = distinct;
   }
 
   addChainedInclude<S extends object>(
@@ -168,6 +183,10 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   }
   applyOrderBy(orderBy: SlimExpressionFunction<T>) {
     this._orderBy = orderBy;
+    this._orderByDescending = null;
+  }
+  applyGroupBy(groupBy: SlimExpressionFunction<T>) {
+    this._groupBy = groupBy;
   }
   applyFunction(type: FunctionQueryType, func: SlimExpressionFunction<T>) {
     if (type)
@@ -177,13 +196,22 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
       };
   }
   applyThenOrderBy(thenOrderBy: SlimExpressionFunction<T>) {
-    this._orderByDescending = thenOrderBy;
+    if (thenOrderBy) {
+      this._thenOrderBy.push(thenOrderBy);
+    }
+  }
+  applyThenGroupBy(thenBy: SlimExpressionFunction<T>) {
+    if (thenBy) {
+      this._thenGroupBy.push(thenBy);
+    }
   }
   applyOrderByDescending(orderBy: SlimExpressionFunction<T>) {
     this._orderByDescending = orderBy;
+    this._orderBy = null;
   }
   extend(spec: ISpecification<T>) {
     this._includes.concat(spec.getIncludes());
+    this._distinct = spec.getDistinct();
     this._chainedIncludes.concat(spec.getChainedIncludes());
     this._criterias.concat(spec.getCriterias());
     this._skip = spec.getSkip();
@@ -193,6 +221,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
 
   clearSpecs() {
     this._includes = [];
+    this._distinct = false;
     this._chainedIncludes = [];
     this._criterias = [];
     this._func = null;
@@ -202,6 +231,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     this._selector = null;
     this._skip = 0;
     this._take = 0;
-    this._thenBy = null;
+    this._thenOrderBy = [];
+    this._thenGroupBy = [];
   }
 }

@@ -494,13 +494,16 @@ export class SQLQuerySpecificationEvaluator<T extends object>
           chainedIncludes = this.spec.getChainedIncludes(),
           criterias = this.spec.getCriterias(),
           orderBy = this.spec.getOrderBy(),
+          groupBy = this.spec.getGroupBy(),
+          thenGroupBy = this.spec.getThenGroupBy(),
           orderByDescending = this.spec.getOrderByDescending(),
           selector = this.spec.getSelector<R>(),
           take = this.spec.getTake(),
           skip = this.spec.getSkip(),
-          thenBy = this.spec.getThenBy(),
+          thenOrderBy = this.spec.getThenOrderBy(),
           isPagingEnabled = this.spec.getIsPagingEnabled(),
-          func = this.spec.getFunction();
+          func = this.spec.getFunction(),
+          isDistinct = this.spec.getDistinct();
 
         if (chainedIncludes && chainedIncludes.length > 0) {
           for (const i of chainedIncludes) {
@@ -556,14 +559,27 @@ export class SQLQuerySpecificationEvaluator<T extends object>
             this._query = this._query.orderBy(propertyAlias, 'DESC');
           }
 
-          if (thenBy) {
-            propertyAlias = this._getPropertyAlias(thenBy);
-            this._query = this._query.addOrderBy(
-              propertyAlias,
-              isAsc ? 'ASC' : 'DESC'
-            );
+          if ((orderBy || orderByDescending) && thenOrderBy?.length) {
+            thenOrderBy.forEach(tb => {
+              propertyAlias = this._getPropertyAlias(tb);
+              this._query = this._query.addOrderBy(
+                propertyAlias,
+                isAsc ? 'ASC' : 'DESC'
+              );
+            });
           }
 
+          if (groupBy) {
+            propertyAlias = this._getPropertyAlias(groupBy);
+            this._query = this._query.groupBy(propertyAlias);
+          }
+
+          if (groupBy && thenGroupBy?.length) {
+            thenGroupBy.forEach(tb => {
+              propertyAlias = this._getPropertyAlias(tb);
+              this._query = this._query.addGroupBy(propertyAlias);
+            });
+          }
           if (isPagingEnabled) {
             if (take) {
               this._query = this._query.take(take);
@@ -571,6 +587,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
             if (skip) {
               this._query = this._query.skip(skip);
             }
+          }
+
+          if (isDistinct) {
+            this._query = this._query.distinct(true);
           }
 
           if (
