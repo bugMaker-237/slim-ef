@@ -1,6 +1,6 @@
 {
   "name": "slim-ef",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "An implementation of basic entity framework functionnalities in typescript",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

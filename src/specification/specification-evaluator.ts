@@ -370,7 +370,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     const pad = (num: number, p = 2, bf = true) =>
       bf ? num.toString().padStart(p, '0') : num.toString().padEnd(p, '0');
 
-    return `${val.getFullYear()}-${pad(val.getMonth())}-${pad(
+    return `${val.getFullYear()}-${pad(val.getMonth() + 1)}-${pad(
       val.getDate()
     )} ${pad(val.getHours())}-${pad(val.getMinutes())}-${pad(
       val.getSeconds()

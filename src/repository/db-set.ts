@@ -298,7 +298,7 @@ export class DbSet<
     return this._baseSpec;
   }
 
-  ignoreQueryFilters() {
+  ignoreQueryFilters(): IQueryable<T, R, P> {
     this._ignoreFilters = true;
     return this as IQueryable<T, R, P>;
   }
