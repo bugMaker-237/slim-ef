@@ -94,20 +94,33 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     return { propertyName, entityAlias };
   }
 
-  private _getFieldNameAndAlias(alias: string, name: string) {
+  private _getFieldNameAndAlias(
+    alias: string,
+    name: string,
+    handlingFunction = false
+  ) {
     const splitted = name.split('.');
-    if (splitted.length >= 2)
+    if (splitted.length >= 2 && !handlingFunction)
       throw new SQLQuerySpecificationException(
         'Include or Where syntax error. Use thenInclude to include composite entity'
       );
     name = splitted[0];
-
     const entityAlias = `${alias}_${name}`;
+
     const isAlreadyRegistered = this.registerdAliases.includes(entityAlias);
-    if (!isAlreadyRegistered) this.registerdAliases.push(entityAlias);
+    if (!isAlreadyRegistered && !handlingFunction) {
+      if (!handlingFunction) this.registerdAliases.push(entityAlias);
+      else
+        throw new SQLQuerySpecificationException(
+          'Include or Where syntax error. Use thenInclude to include composite entity'
+        );
+    }
+
     return {
       propertyName: `${alias}.${name}`,
-      entityAlias,
+      entityAlias: handlingFunction
+        ? `${alias}_${splitted.join('_')}`
+        : entityAlias,
       isAlreadyRegistered
     };
   }
@@ -154,17 +167,23 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     exp.fromAction(selector.func, selector.context, false);
     exp.compile();
     const toApply = isFirst ? sqlQuery.where : sqlQuery.andWhere;
-    return this._chunkDownToQuery(exp, sqlQuery, alias, toApply);
+    // applying brackets around each where clause to improve consistency
+    // and fiability of the request
+    const brackets = new Brackets(wh => {
+      this._chunkDownToQuery(exp, wh, alias, toApply);
+    });
+    toApply.call(sqlQuery, brackets);
+    return sqlQuery;
   }
 
   private _chunkDownToQuery(
     exp: ISlimExpression<any, any, any>,
-    sqlQuery: SelectQueryBuilder<T>,
+    sqlQuery: WhereExpression,
     alias: ((implicitName: string) => string) | string,
     initialToApply: WhereQuery<T>,
     closingExp?: ISlimExpression<any, any, any>,
     setupBrackets: 'inactive' | 'active' = 'inactive'
-  ): SelectQueryBuilder<T> {
+  ): WhereExpression {
     try {
       const querySequence = this._getQuerySequence(
         exp,
@@ -427,10 +446,11 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         // i.e t => t.tickets.some(...), we have to get 'tickets'
         // but since .propertyName attribute gives 'some' we
         // have to go up the propertytree
-        // LHS.propertyTree[LHS.propertyTree.length - 2]
+        //  LHS.propertyTree.slice(0, LHS.propertyTree.length - 1).join('.')
         const { entityAlias } = this._getFieldNameAndAlias(
           alias,
-          LHS.propertyTree[LHS.propertyTree.length - 2]
+          LHS.propertyTree.slice(0, LHS.propertyTree.length - 1).join('.'),
+          true
         );
         alias = entityAlias;
         const exp = LHS?.content?.expression;

@@ -202,6 +202,7 @@ export class DbSet<
         Object.prototype.hasOwnProperty.call(res, k)
       ) {
         const element = res[k];
+        if (!element) continue;
         if (!Array.isArray(element)) {
           const canGrind =
             !(element instanceof String) &&
@@ -214,7 +215,7 @@ export class DbSet<
                 field: `${e.field}`
               }))
             );
-          } else {
+          } else if (element.$$propertyName) {
             fieldsToSelect.push({
               field: element.$$propertyName
             });
