@@ -66,16 +66,16 @@ export const ComparisonOperators = {
   STRICTLY_NOT_EQUAL_TO: '!=='
 };
 
-export function convertToSqlComparisonOperator(op: string) {
+export function convertToSqlComparisonOperator(op: string, val?: any) {
   let res = '' + op;
 
   if (
     res === ComparisonOperators.EQUAL_TO ||
     res === ComparisonOperators.STRICTLY_EQUAL_TO
   )
-    res = '=';
+    res = val === null ? 'is' : '=';
   else if (res === ComparisonOperators.STRICTLY_NOT_EQUAL_TO)
-    res = ComparisonOperators.NOT_EQUAL_TO;
+    res = val === null ? 'is not' : exports.ComparisonOperators.NOT_EQUAL_TO;
 
   return res;
 }

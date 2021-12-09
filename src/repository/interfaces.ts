@@ -253,6 +253,13 @@ declare global {
      */
     includes(searchStrings: string[]): boolean;
   }
+  interface Object {
+    /**
+     * Returns true if one of the searchString appears in the result
+     * @param searchString search string
+     */
+    includes(searchStrings: string[]): boolean;
+  }
   interface Number {
     /**
      * Returns true if one of the searchNumbers appears in the result

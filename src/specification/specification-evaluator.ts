@@ -363,7 +363,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
 
         queryStr += ` ${
           lhs.isMethod ? '' : lhsName
-        } ${convertToSqlComparisonOperator(operator)} :${paramName}`;
+        } ${convertToSqlComparisonOperator(
+          operator,
+          rhs.propertyValue
+        )} :${paramName}`;
         queryParams = {} as any;
 
         // we need to format the date because typeorm has issue handling it with
@@ -377,7 +380,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       } else {
         queryStr += ` ${
           lhs.isMethod ? '' : lhsName
-        } ${convertToSqlComparisonOperator(operator)} ${rhsName}`;
+        } ${convertToSqlComparisonOperator(
+          operator,
+          rhs.propertyValue
+        )} ${rhsName}`;
       }
     }
     return {
