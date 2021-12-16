@@ -316,8 +316,8 @@ export class DbSet<
     return this as any;
   }
 
-  async toList(): Promise<T[]> {
-    return await this.execute(this._queryTypeToExecute);
+  toList(): Promise<T[]> {
+    return this.execute(this._queryTypeToExecute);
   }
 
   private async execute<TResult>(type: QueryType): Promise<TResult> {
