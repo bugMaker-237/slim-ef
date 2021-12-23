@@ -10,8 +10,7 @@ import {
   SelectQueryBuilder,
   ObjectLiteral,
   Brackets,
-  WhereExpression,
-  QueryBuilder
+  WhereExpressionBuilder
 } from 'typeorm';
 import {
   SQLConstants,
@@ -32,8 +31,6 @@ import {
   ExpressionRightHandSide
 } from 'slim-exp';
 import { SQLQuerySpecificationException } from './exception';
-import { Query } from 'typeorm/driver/Query';
-
 const INITIAL_ALIAS = 'entity';
 type WhereQuery<T> = (
   where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string)
@@ -163,27 +160,39 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     selector: CriteriaExpression<T>,
     isFirst = false
   ): SelectQueryBuilder<T> {
-    const exp = new SlimExpression();
-    exp.fromAction(selector.func, selector.context, false);
-    exp.compile();
-    const toApply = isFirst ? sqlQuery.where : sqlQuery.andWhere;
-    // applying brackets around each where clause to improve consistency
-    // and fiability of the request
-    const brackets = new Brackets(wh => {
-      this._chunkDownToQuery(exp, wh, alias, toApply);
-    });
-    toApply.call(sqlQuery, brackets);
-    return sqlQuery;
+    try {
+      const exp = new SlimExpression();
+      exp.fromAction(selector.func, selector.context, false);
+      exp.compile();
+      const toApply = isFirst ? sqlQuery.where : sqlQuery.andWhere;
+      // applying brackets around each where clause to improve consistency
+      // and fiability of the request
+      const brackets = new Brackets(wh => {
+        this._chunkDownToQuery(exp, wh, alias, toApply);
+      });
+      toApply.call(sqlQuery, brackets);
+      return sqlQuery;
+    } catch (error) {
+      throw new SQLQuerySpecificationException(
+        error?.message +
+        '; func:' +
+        selector.func.toString() +
+        '; context: ' +
+        selector.context
+          ? JSON.stringify(selector.context)
+          : ''
+      );
+    }
   }
 
   private _chunkDownToQuery(
     exp: ISlimExpression<any, any, any>,
-    sqlQuery: WhereExpression,
+    sqlQuery: WhereExpressionBuilder,
     alias: ((implicitName: string) => string) | string,
     initialToApply: WhereQuery<T>,
     closingExp?: ISlimExpression<any, any, any>,
     setupBrackets: 'inactive' | 'active' = 'inactive'
-  ): WhereExpression {
+  ): WhereExpressionBuilder {
     try {
       const querySequence = this._getQuerySequence(
         exp,
@@ -200,7 +209,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     }
   }
   private _applyRecursively(
-    sqlQuery: WhereExpression,
+    sqlQuery: WhereExpressionBuilder,
     querySequence: QuerySequence<T>
   ) {
     const first = querySequence;
@@ -429,10 +438,11 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       };
     } else if (
       !(content.type in PrimitiveTypes) &&
-      content.methodName in SQLArrayFunctions
+      content.methodName in SQLArrayFunctions &&
+      Array.isArray(content.primitiveValue)
     ) {
       func = SQLArrayFunctions[content.methodName];
-      const tb = (content.primitiveValue as []).map(v => `'${v}'`);
+      const tb = content.primitiveValue.map(v => `'${v}'`);
       sqlPart = format(func, propName, tb.toString());
       return {
         topLevelSequence: [{ toApply, queryStr: sqlPart }],
@@ -686,43 +696,39 @@ export class SQLQuerySpecificationEvaluator<T extends object>
   public async executeQuery<R extends object = T, Q = R[]>(
     type: QueryType
   ): Promise<Q> {
-    try {
-      if (!this._queryReady) await this.getQuery<R>();
-      let toApply;
-      let defaultVal;
-      switch (type) {
-        case QueryType.ALL:
-          toApply = this._query.getMany;
-          defaultVal = [];
-          break;
-        case QueryType.ONE:
-          toApply = this._query.getOne;
-          defaultVal = void 0;
-          break;
-        case QueryType.RAW_ONE:
-          toApply = this._query.getRawOne;
-          defaultVal = void 0;
-          break;
-        case QueryType.RAW_ALL:
-          toApply = this._query.getRawMany;
-          defaultVal = [];
-          break;
+    if (!this._queryReady) await this.getQuery<R>();
+    let toApply;
+    let defaultVal;
+    switch (type) {
+      case QueryType.ALL:
+        toApply = this._query.getMany;
+        defaultVal = [];
+        break;
+      case QueryType.ONE:
+        toApply = this._query.getOne;
+        defaultVal = void 0;
+        break;
+      case QueryType.RAW_ONE:
+        toApply = this._query.getRawOne;
+        defaultVal = void 0;
+        break;
+      case QueryType.RAW_ALL:
+        toApply = this._query.getRawMany;
+        defaultVal = [];
+        break;
 
-        default:
-          break;
-      }
-      const result = (await toApply.call(this._query)) || defaultVal;
-      let finalRes: any;
-      if (this._selectBuilder) {
-        finalRes = Array.isArray(result)
-          ? result.map(r => this._selectBuilder(r))
-          : this._selectBuilder(result);
-      } else {
-        finalRes = result;
-      }
-      return finalRes;
-    } catch (error) {
-      throw error;
+      default:
+        break;
     }
+    const result = (await toApply.call(this._query)) || defaultVal;
+    let finalRes: any;
+    if (this._selectBuilder) {
+      finalRes = Array.isArray(result)
+        ? result.map(r => this._selectBuilder(r))
+        : this._selectBuilder(result);
+    } else {
+      finalRes = result;
+    }
+    return finalRes;
   }
 }
