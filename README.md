@@ -1,13 +1,26 @@
-# Slim-Exp
+# Slim-EF
 
 ![logo](/slim-ef.png)
 
-Slim-ef is an implementation of basic entity framework & LINQ functionnalities in typescript powered by [slim-exp expression parser](https://github.com/bugMaker-237/slim-exp) and [typeorm](https://github.com/typeorm/typeorm). Entity framework makes life easier for .NET developers with the help of the powerful fluent LINQ API. Many nodejs ORM exist out there. Unfortunately none of them offers a **completely string-literal-free fluent api**. Although this is normal for a .NET dev like me who will desire (and think that is a must) to work in such an environment.
+Slim-ef is an implementation of basic entity framework & LINQ functionnalities in typescript powered by [slim-exp expression parser](https://github.com/bugMaker-237/slim-exp). Entity framework makes life easier for .NET developers with the help of the powerful fluent LINQ API. Many nodejs ORM exist out there. Unfortunately none of them offers a **completely string-literal-free fluent api**. Although this is normal for a .NET dev like me who will desire (and think that is a must) to work in such an environment.
+
+## Package Architecture
+
+Since v0.9.x the codebase is split into two packages:
+
+| Package | Description |
+|---------|-------------|
+| `slim-ef` | Framework core — LINQ query API, DbContext, abstractions. **No direct TypeORM runtime dependency.** |
+| `slim-ef-typeorm` | TypeORM adapter — `SQLQuerySpecificationEvaluator` and any other TypeORM-specific implementations. |
+
+This split means you can use `slim-ef` core in a project that targets a different ORM by providing your own `IQuerySpecificationEvaluator` implementation, while keeping the same fluent LINQ API.
 
 ### Prerequisite
 
 - A knowledge of [typeorm](https://github.com/typeorm/typeorm)
-  Actually `slim-ef` is a wrapper around typeorm. Typeorm is a pretty complete orm. which offers a lot of tools form mapping rowdata with models. Most of these functinnalities have been abstracted by `slim-ef`, but you still need to write your models with typeorm's decorators (@Column, @OnetoMany, etc...). Future versions of `slim-ef` may abstract these decorators too.
+  Although `slim-ef` core no longer depends on TypeORM at runtime, the default adapter (`slim-ef-typeorm`) is built on top of TypeORM. You still need to define your models with TypeORM decorators (`@Column`, `@OneToMany`, etc.). Future versions may add adapters for other ORMs.
+
+
 
 ### Why you should use slim-ef
 
@@ -25,8 +38,12 @@ Slim-ef is an implementation of basic entity framework & LINQ functionnalities i
 
 ### Installing
 
-```
+```bash
+# Core framework
 npm i slim-ef
+
+# TypeORM adapter (required to use the default SQL evaluator with TypeORM)
+npm i slim-ef-typeorm
 ```
 
 ### How to use
@@ -39,16 +56,16 @@ First you need to create your various models using the typeorm decorators as spe
 Then you need to create a DbContext class that will inherit from slim-ef's DbContext.
 
 ```ts
-...
-
 import { Connection } from 'typeorm';
+import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 import {
   DbContext,
   DbSet,
   DbSetEntity,
-  IDbSet,
-  SQLQuerySpecificationEvaluator
+  IDbSet
 } from 'slim-ef';
+// SQLQuerySpecificationEvaluator is now in the slim-ef-typeorm adapter package
+import { SQLQuerySpecificationEvaluator } from 'slim-ef-typeorm';
 import { IDbContextOptionsBuilder, DbContextModelBuilder } from 'slim-ef/uow';
 
 export class FakeDBContext extends DbContext {
@@ -447,6 +464,60 @@ For detail examples see : [Slim-ef-examples](https://github.com/bugMaker-237/sli
 - Change tracking
 - Improve `select` api
 - More tests!
+
+## Migration Guide (v0.9.x → package split)
+
+### Breaking Changes
+
+**`SQLQuerySpecificationEvaluator` has moved** from `slim-ef` to `slim-ef-typeorm`.
+
+#### Before (v0.9.0)
+
+```ts
+import {
+  DbContext,
+  SQLQuerySpecificationEvaluator  // ← was in slim-ef
+} from 'slim-ef';
+import { Connection } from 'typeorm';
+
+export class MyContext extends DbContext {
+  constructor() {
+    super(new Connection({...}), SQLQuerySpecificationEvaluator);
+  }
+}
+```
+
+#### After (current)
+
+```ts
+import { DbContext } from 'slim-ef';
+import { SQLQuerySpecificationEvaluator } from 'slim-ef-typeorm'; // ← now in slim-ef-typeorm
+import { Connection } from 'typeorm';
+
+export class MyContext extends DbContext {
+  constructor() {
+    super(new Connection({...}), SQLQuerySpecificationEvaluator);
+  }
+}
+```
+
+### What Did Not Change
+
+- `DbContext` constructor still accepts a TypeORM `Connection` object directly (TypeORM's `Connection` is structurally compatible with the new `IDbConnectionAdapter` interface).
+- All existing LINQ query APIs (`where`, `include`, `select`, `orderBy`, etc.) are unchanged.
+- `DbSetEntity`, `EntityRepository`, `IDbSet`, `UnitOfWork` — all still exported from `slim-ef`.
+
+### New Core Abstractions
+
+The following interfaces are now exported from `slim-ef` and can be used to implement alternative adapters:
+
+| Interface | Description |
+|-----------|-------------|
+| `IDbConnectionAdapter` | Abstraction over a database connection |
+| `IDbRepository<T>` | Abstraction over a repository |
+| `IQueryRunner` | Abstraction over a transaction runner |
+| `IEntityMetadata` | Minimal entity metadata shape |
+| `IEntityManager` | Abstraction over the entity manager |
 
 ## Usage Note
 
