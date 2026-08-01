@@ -1,8 +1,7 @@
 import { resolve } from 'path';
 import { Connection } from 'typeorm';
-import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
 import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
-import { SQLQuerySpecificationEvaluator } from '../src';
+import { SQLQuerySpecificationEvaluator } from 'slim-ef-typeorm';
 import { UnitOfWork } from '../src/uow';
 import { IDbContextOptionsBuilder } from '../src/uow/interfaces';
 import { DbContextModelBuilder } from '../src/uow/model-builder';

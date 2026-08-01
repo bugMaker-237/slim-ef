@@ -75,7 +75,7 @@ export function convertToSqlComparisonOperator(op: string, val?: any) {
   )
     res = val === null ? 'is' : '=';
   else if (res === ComparisonOperators.STRICTLY_NOT_EQUAL_TO)
-    res = val === null ? 'is not' : exports.ComparisonOperators.NOT_EQUAL_TO;
+    res = val === null ? 'is not' : ComparisonOperators.NOT_EQUAL_TO;
 
   return res;
 }

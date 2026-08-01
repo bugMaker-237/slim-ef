@@ -1,7 +1,8 @@
-export { SQLQuerySpecificationEvaluator } from './specification-evaluator';
 export {
   IQuerySpecificationEvaluator,
+  ISpecification,
   FunctionQueryType,
+  QueryType,
   QuerySpecificationEvaluatorConstructor,
   FieldsSelector,
   CriteriaExpression

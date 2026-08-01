@@ -1,16 +1,15 @@
 import { resolve } from 'path';
 import { Connection } from 'typeorm';
-import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
 import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 import {
   DbContext,
   DbSet,
   DbSetEntity,
-  IDbSet,
-  SQLQuerySpecificationEvaluator
-} from '../lib';
-import { IDbContextOptionsBuilder } from '../lib/uow/interfaces';
-import { DbContextModelBuilder } from '../lib/uow/model-builder';
+  IDbSet
+} from '../src';
+import { SQLQuerySpecificationEvaluator } from 'slim-ef-typeorm';
+import { IDbContextOptionsBuilder } from '../src/uow/interfaces';
+import { DbContextModelBuilder } from '../src/uow/model-builder';
 import { Agency } from './entities/agency';
 import { Person } from './entities/person';
 import { Trip } from './entities/trip';

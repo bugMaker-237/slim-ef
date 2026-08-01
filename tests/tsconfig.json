@@ -14,7 +14,11 @@
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "slim-ef": ["../src/index.ts"],
+      "slim-ef-typeorm": ["../packages/slim-ef-typeorm/src/index.ts"]
+    }
   },
   "include": ["./*"],
   "exclude": ["node_modules"]

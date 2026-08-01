@@ -1,8 +1,8 @@
-import { BaseEntity, Connection, QueryRunner, Repository } from 'typeorm';
+import { IDbConnectionAdapter, IDbRepository, IQueryRunner } from '../db-provider/interfaces';
 import { getEntitySchema, getEntitySet, getEntitySetKeys } from '../repository';
 import { DbSet, UnderlyingType } from '../repository/db-set';
-import { IDbSet, IQueryable } from '../repository/interfaces';
-import { DeepPartial, IInternalDbSet } from '../repository/_internal.interface';
+import { IDbSet } from '../repository/interfaces';
+import { IInternalDbSet } from '../repository/_internal.interface';
 import {
   QuerySpecificationEvaluatorConstructor,
   QueryType
@@ -25,17 +25,17 @@ interface IEntity {
 }
 
 export abstract class DbContext implements IDbContext, IInternalDbContext {
-  private _entitySets: WeakMap<any, Repository<any>>;
+  private _entitySets: WeakMap<any, IDbRepository<any>>;
   private _new: IEntity[] = [];
   private _dirty: IEntity[] = [];
   private _deleted: IEntity[] = [];
-  private _queryRunner: QueryRunner | null;
+  private _queryRunner: IQueryRunner | null;
   private _modelBuilder: DbContextModelBuilder<any>;
   private _optionsBuilder: DbContextOptionsBuilder;
   private _isUserTransaction: boolean;
 
   constructor(
-    protected _connection: Connection,
+    protected _connection: IDbConnectionAdapter,
     protected evaluator: QuerySpecificationEvaluatorConstructor
   ) {
     this._entitySets = new WeakMap();
@@ -325,7 +325,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     return initializer as QueryInitializer<T>;
   }
 
-  private _getRepository<T>(type: any): Repository<T> {
+  private _getRepository<T>(type: any): IDbRepository<T> {
     if (type instanceof DbSet) {
       type = type[UnderlyingType];
     }

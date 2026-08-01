@@ -25,6 +25,16 @@ export {
   QueryInitializer
 } from './uow';
 
+export {
+  IDbConnectionAdapter,
+  IDbRepository,
+  IQueryRunner,
+  IEntityMetadata,
+  IEntityColumnMetadata,
+  IEntityRelationMetadata,
+  IEntityManager
+} from './db-provider/interfaces';
+
 export * from './repository/utilis';
 
 export * from './specification/index';

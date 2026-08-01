@@ -1,4 +1,3 @@
-import { SelectQueryBuilder } from 'typeorm';
 import { IDbSet } from '../repository';
 
 export type IUnitOfWork = IDbContext;
@@ -99,7 +98,7 @@ export interface IDbContext {
   loadRelatedData<T>(type: new (...args: []) => T, entity: T): Promise<T>;
 }
 
-export type QueryInitializer<T> = (alias: string) => SelectQueryBuilder<T>;
+export type QueryInitializer<T> = (alias: string) => any;
 
 export interface ISavedTransaction {
   added: any[];

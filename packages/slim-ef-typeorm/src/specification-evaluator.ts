@@ -5,7 +5,7 @@ import {
   QueryType,
   FunctionQueryType,
   FieldsSelector
-} from './specification.interface';
+} from 'slim-ef';
 import {
   SelectQueryBuilder,
   ObjectLiteral,

@@ -1,4 +1,4 @@
-import { Connection, EntityMetadata } from 'typeorm';
+import { IDbConnectionAdapter, IEntityMetadata } from '../db-provider/interfaces';
 import {
   SelectArrayProxy,
   SelectBooleanProxy,
@@ -10,19 +10,16 @@ import { ProxyMetaDataInstance } from './_internal.interface';
 const map = new WeakMap();
 
 export function getMetaData<T>(
-  con: Connection,
-  type: new (...args) => T,
+  con: IDbConnectionAdapter,
+  type: new (...args: any[]) => T,
   includePaths: string[]
 ): ProxyMetaDataInstance<T> {
-  // if (map.has(type)) return map.get(type);
-  // const meta = _getMetaData<T>(con, type, [], '', includePaths);
-  // map.set(type, meta);
   // TODO: Find a way to cache this with the include paths
   return _getMetaData<T>(con, type, [], '', includePaths);
 }
 
 function _getMetaData<T>(
-  con: Connection,
+  con: IDbConnectionAdapter,
   type: any,
   constructorChain = [],
   basePropName = '',
@@ -41,9 +38,9 @@ function _getMetaData<T>(
 }
 
 function _getTypeMetaData<T = any>(
-  meta: EntityMetadata,
+  meta: IEntityMetadata,
   type: any,
-  con: Connection,
+  con: IDbConnectionAdapter,
   constructorChain: any[],
   basePropName = '',
   includePaths: string[] = []
@@ -68,8 +65,8 @@ function _getTypeMetaData<T = any>(
 }
 
 function _getInstanceWithRelationsMetadata(
-  con: Connection,
-  metaData: EntityMetadata,
+  con: IDbConnectionAdapter,
+  metaData: IEntityMetadata,
   previousInstance: any,
   type: any,
   constructorChain: any[],
@@ -125,7 +122,7 @@ function _getInstanceWithRelationsMetadata(
 }
 
 function _getInstanceWithColumnsMetadata(
-  metaData: EntityMetadata,
+  metaData: IEntityMetadata,
   type: any,
   basePropName = ''
 ) {

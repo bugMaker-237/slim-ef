@@ -13,7 +13,7 @@ import {
   IQueryable,
   IQueryableSelectionResult
 } from './interfaces';
-import { DeepPartial } from 'typeorm';
+import { DeepPartial } from './_internal.interface';
 import { patchM } from './utilis';
 import { getEntitySchema } from './repository.decorator';
 import { EmptySetException } from './exception';
@@ -28,7 +28,7 @@ export class DbSet<
   T extends EntityBase,
   R extends T | T[] = T,
   P = T,
-  E = T | DeepPartial<T>
+  E extends T | DeepPartial<T> = T | DeepPartial<T>
 > implements IDbSet<T, R, P, E> {
   private _queryTypeToExecute = QueryType.ALL;
   private _baseSpec = new BaseSpecification<T>();
