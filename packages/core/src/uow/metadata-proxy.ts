@@ -1,7 +1,7 @@
 export class SelectStringProxy extends String {
   public $$propertyName: string;
 
-  constructor(propName) {
+  constructor(propName: string) {
     super();
     this.$$propertyName = propName;
   }
@@ -11,7 +11,7 @@ export class SelectStringProxy extends String {
 export class SelectNumberProxy extends Number {
   public $$propertyName: string;
 
-  constructor(propName) {
+  constructor(propName: string) {
     super();
     this.$$propertyName = propName;
   }
@@ -21,7 +21,7 @@ export class SelectNumberProxy extends Number {
 export class SelectBooleanProxy extends Boolean {
   public $$propertyName: string;
 
-  constructor(propName) {
+  constructor(propName: string) {
     super();
     this.$$propertyName = propName;
   }
@@ -31,7 +31,7 @@ export class SelectBooleanProxy extends Boolean {
 export class SelectArrayProxy extends Array {
   public $$propertyName: string;
 
-  constructor(propName) {
+  constructor(propName: string) {
     super();
     this.$$propertyName = propName;
   }

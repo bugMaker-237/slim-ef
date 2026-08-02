@@ -1,6 +1,7 @@
 import { IDbSet } from '../repository';
 
 export type IUnitOfWork = IDbContext;
+
 export interface IDbContext {
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
@@ -40,7 +41,10 @@ export interface IDbContext {
    * @param type The entity type
    * @param id The entity id
    */
-  find<T>(type: new (...args: any) => T, id: any): Promise<T> | T;
+  find<T>(
+    type: new (...args: any) => T,
+    id: any
+  ): Promise<T | undefined> | T | undefined;
   /**
    * Creates a database connextion and executes the given query
    * @param query

@@ -16,9 +16,9 @@ export interface IQueryRunner {
  * TypeORM's `Repository<T>` is structurally compatible with this interface.
  */
 export interface IDbRepository<T> {
-  findOne(id: any): Promise<T | undefined>;
-  save(entity: any): Promise<T>;
-  delete(entity: any): Promise<any>;
+  findOne(id: any): Promise<T | null>;
+  save(entity: T): Promise<T>;
+  delete(entity: T): Promise<boolean>;
   createQueryBuilder(alias: string): any;
 }
 
@@ -31,7 +31,7 @@ export interface IEntityColumnMetadata {
 /** Minimal relation metadata needed by the proxy metadata builder. */
 export interface IEntityRelationMetadata {
   propertyName: string;
-  type: any;
+  type: Function;
   isOneToMany: boolean;
 }
 
@@ -54,7 +54,7 @@ export interface IEntityManager {
  */
 export interface IDbConnectionAdapter {
   readonly isConnected: boolean;
-  connect(): Promise<any>;
+  connect(): Promise<void>;
   close(): Promise<void>;
   createQueryRunner(): IQueryRunner;
   getRepository<T>(schema: any): IDbRepository<T>;

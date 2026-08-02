@@ -1,11 +1,14 @@
-import { IDbConnectionAdapter, IEntityMetadata } from '../db-provider/interfaces';
+import {
+  IDbConnectionAdapter,
+  IEntityMetadata
+} from '../db-provider/interfaces';
+import { ProxyMetaDataInstance } from './_internal.interface';
 import {
   SelectArrayProxy,
   SelectBooleanProxy,
   SelectNumberProxy,
   SelectStringProxy
 } from './metadata-proxy';
-import { ProxyMetaDataInstance } from './_internal.interface';
 
 const map = new WeakMap();
 
@@ -21,7 +24,7 @@ export function getMetaData<T>(
 function _getMetaData<T>(
   con: IDbConnectionAdapter,
   type: any,
-  constructorChain = [],
+  constructorChain: any[] = [],
   basePropName = '',
   includePaths: string[] = []
 ): ProxyMetaDataInstance<T> {
@@ -88,6 +91,7 @@ function _getInstanceWithRelationsMetadata(
         ? `${basePropName}.${c.propertyName}`
         : c.propertyName
     };
+
     const subType = new (c as any).type();
     let meta;
     const i = constructorChain.findIndex(o => o.constructor === c.type);

@@ -27,19 +27,21 @@ export interface ISpecification<T = undefined> {
     chain: SlimExpressionFunction<any, any>[];
   }[];
 
-  getOrderBy(): SlimExpressionFunction<T>;
-  getGroupBy(): SlimExpressionFunction<T>;
-  getFunction(): {
-    type: FunctionQueryType;
-    func: SlimExpressionFunction<T>;
-  };
-  getOrderByDescending(): SlimExpressionFunction<T>;
+  getOrderBy(): SlimExpressionFunction<T> | null;
+  getGroupBy(): SlimExpressionFunction<T> | null;
+  getFunction():
+    | {
+        type: FunctionQueryType;
+        func: SlimExpressionFunction<T>;
+      }
+    | null;
+  getOrderByDescending(): SlimExpressionFunction<T> | null;
   getThenGroupBy(): SlimExpressionFunction<T>[];
   getThenOrderBy(): SlimExpressionFunction<T>[];
   getTake(): number;
   getSkip(): number;
   getIsPagingEnabled(): boolean;
-  getSelector<R extends object = any>(): FieldsSelector<T, R>;
+  getSelector<R extends object = any>(): FieldsSelector<T, R> | null;
 }
 export enum QueryType {
   ONE,
@@ -54,10 +56,7 @@ export type QuerySpecificationEvaluatorConstructor<T = any> = new (
 ) => IQuerySpecificationEvaluator<T>;
 
 export declare class IQuerySpecificationEvaluator<T = any> {
-  constructor(
-    initialQuery: (alias: string) => any,
-    spec: ISpecification<T>
-  );
+  constructor(initialQuery: (alias: string) => any, spec: ISpecification<T>);
   executeQuery<R = T, Q = R[]>(type: QueryType): Promise<Q>;
   getQuery(): Promise<string> | string;
   getParams(): Promise<any> | any;

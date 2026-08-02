@@ -14,7 +14,7 @@ export interface IInternalDbContext {
     ignoreFilters?: boolean
   ): Promise<R>;
   getMetadata<T>(
-    type: new (...args) => T,
+    type: new (...args: []) => T,
     includePaths: string[]
   ): Promise<ProxyMetaDataInstance<T>>;
   loadRelatedData<T>(type: new (...args: []) => T, entity: T): Promise<T>;

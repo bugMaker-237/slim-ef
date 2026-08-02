@@ -1,8 +1,8 @@
 import { DeepPartial } from './_internal.interface';
 
 function __patch<T>(entityShema: new () => T, entity: T | DeepPartial<T>): T {
-  const t = new entityShema();
-  if (t.constructor !== (entity as any).constructor) {
+  const t: any = new entityShema();
+  if (t['constructor'] !== (entity as any).constructor) {
     Object.assign(t, entity);
     return t;
   }

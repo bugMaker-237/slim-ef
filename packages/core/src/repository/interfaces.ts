@@ -1,17 +1,24 @@
-import { SlimExpressionFunction } from 'slim-exp';
-import { IDbContext, IUnitOfWork } from '../uow';
 import { DeepPartial } from './_internal.interface';
 
 export { DeepPartial };
 export interface QueryRefiner<T extends object> {
-  (obj: IQueryable<T, T>);
+  (obj: IQueryable<T, T>): void;
 }
+
+export const UnderlyingType = Symbol('__UnderlyingType');
 
 export type EntityBase = {};
 export type ExpressionResult = object | PrimitiveType;
 // T extends (infer U)[] ? U : T;
-export type Includable<T> = T | T[];
+export type Includable<T> = (T | undefined) | (T | undefined)[];
 export type PrimitiveType = string | number | boolean;
+
+export type Predicate<T, R = boolean> = (obj: T) => R;
+
+export type PredicateWithContext<T, C extends object, R = boolean> = (
+  obj: T,
+  context: C
+) => R;
 
 export interface IQueryableSelectionResult<
   V extends EntityBase,
@@ -24,16 +31,28 @@ export interface IQueryableSelectionResult<
   /**
    * Asynchronously returns the first element of the sequence that satisfies a specified condition.
    * @param predicate A function to test each element for a condition.
+   */
+  first<C extends object = any>(predicate: Predicate<T>): Promise<V>;
+  /**
+   * Asynchronously returns the first element of the sequence that satisfies a specified condition.
+   * @param predicate A function to test each element for a condition.
    * @param context The predicate data source
    */
-  first<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>,
-    context?: C
+  first<C extends object = any>(
+    predicate: PredicateWithContext<T, C>,
+    context: C
   ): Promise<V>;
   /**
    * Asynchronously returns the first element of a sequence, or a default value if the sequence contains no elements.
    */
   firstOrDefault(): Promise<V>;
+
+  /**
+   *  Asynchronously returns the first element of a sequence that satisfies a specified condition
+   * @param predicate A function to test each element for a condition.
+   */
+  firstOrDefault<C extends object = any>(predicate: Predicate<T>): Promise<V>;
+
   /**
    * Asynchronously returns the first element of a sequence that satisfies a specified condition
    * or a default value if no such element is found.
@@ -41,7 +60,7 @@ export interface IQueryableSelectionResult<
    * @param context The predicate data source
    */
   firstOrDefault<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>,
+    predicate: PredicateWithContext<T, C>,
     context?: C
   ): Promise<V>;
 
@@ -55,8 +74,11 @@ export interface IQueryableSelectionResult<
   distinct(): this;
 }
 
-export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
-  extends IQueryableSelectionResult<T> {
+export interface IQueryable<
+  T extends EntityBase,
+  R extends T | T[] = T,
+  P = T
+> extends IQueryableSelectionResult<T> {
   /**
    * Specifies related entities to include in the query results. The navigation property
    * to be included is specified starting with the type of entity being queried (TEntity).
@@ -65,7 +87,7 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    * @param navigationPropertyPath The type of the related entity to be included.
    */
   include<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<T, Includable<S>>
+    navigationPropertyPath: Predicate<T, Includable<S>>
   ): IQueryable<T, R, S>;
 
   /**
@@ -74,7 +96,7 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    * @param navigationPropertyPath The type of the related entity to be included.
    */
   thenInclude<S extends object>(
-    navigationPropertyPath: SlimExpressionFunction<P, Includable<S>>
+    navigationPropertyPath: Predicate<P, Includable<S>>
   ): IQueryable<T, R, S>;
 
   /**
@@ -83,9 +105,16 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    * @param context The predicate data source
    */
   where<C extends object>(
-    predicate: SlimExpressionFunction<T, boolean, C>,
-    context?: C
+    predicate: PredicateWithContext<T, C>,
+    context: C
   ): IQueryable<T, R, P>;
+
+  /**
+   * Filters the sequence based on a predicate.
+   * @param predicate A function to test each element for a condition.
+   */
+  where(predicate: Predicate<T>): IQueryable<T, R, P>;
+
   /**
    * Returns a specified number of contiguous elements from the start of the sequence.
    * @param count The number of elements to return.
@@ -103,46 +132,44 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    * invoking a projection function on each element of the input sequence.
    * @param selector A projection function to apply to each element.
    */
-  sum(selector: SlimExpressionFunction<T, number>): Promise<number>;
+  sum(selector: Predicate<T, number>): Promise<number>;
 
   /**
    * Computes the average of a sequence of number values that is obtained by
    * invoking a projection function on each element of the input sequence.
    * @param selector A projection function to apply to each element.
    */
-  average(selector: SlimExpressionFunction<T, number>): Promise<number>;
+  average(selector: Predicate<T, number>): Promise<number>;
 
   /**
    * Returns the number of elements in the specified sequence. If condition is provided,
    * the resulting elements will satisfy the condition.
    * @param predicate A function to test each element for a condition.
    */
+  count(predicate?: Predicate<T>): Promise<number>;
   count<C extends object>(
-    predicate?: SlimExpressionFunction<T, boolean, C>
+    predicate: PredicateWithContext<T, C>,
+    context: C
   ): Promise<number>;
   /**
    * Invokes a projection function on each element of the sequence
    * and returns the maximum resulting value.
    * @param selector A projection function to apply to each element.
    */
-  max<O extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, O>
-  ): Promise<O>;
+  max<O extends ExpressionResult>(selector: Predicate<T, O>): Promise<O>;
   /**
    * Invokes a projection function on each element of the sequence
    * and returns the minimum resulting value.
    * @param selector A projection function to apply to each element.
    */
-  min<O extends ExpressionResult>(
-    selector: SlimExpressionFunction<T, O>
-  ): Promise<O>;
+  min<O extends ExpressionResult>(selector: Predicate<T, O>): Promise<O>;
 
   /**
    * Projects each element of a sequence into a new form.
    * @param selector A projection function to apply to each element.
    */
   select<V extends object>(
-    selector: SlimExpressionFunction<T, V>
+    selector: Predicate<T, V>
   ): IQueryableSelectionResult<V, R>;
 
   /**
@@ -155,31 +182,39 @@ export interface IQueryable<T extends EntityBase, R extends T | T[] = T, P = T>
    *  Sorts the elements of a sequence in descending order according to a key.
    * @param keySelector A function to extract a key from an element.
    */
-  orderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+  orderBy<O extends ExpressionResult>(
+    keySelector: Predicate<T, O>
+  ): IQueryable<T, R, P>;
 
   /**
    * Performs a subsequent ordering of the elements in a sequence in ascending order
    * @param keySelector
    */
-  thenOrderBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+  thenOrderBy<O extends ExpressionResult>(
+    keySelector: Predicate<T, O>
+  ): IQueryable<T, R, P>;
   /**
    *  Groups the elements of a sequence according to a key.
    * @param keySelector A function to extract a key from an element.
    */
-  groupBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+  groupBy<O extends ExpressionResult>(
+    keySelector: Predicate<T, O>
+  ): IQueryable<T, R, P>;
 
   /**
    * Performs a subsequent grouping of the elements in a sequence
    * @param keySelector
    */
-  thenGroupBy(keySelector: SlimExpressionFunction<T>): IQueryable<T, R, P>;
+  thenGroupBy<O extends ExpressionResult>(
+    keySelector: Predicate<T, O>
+  ): IQueryable<T, R, P>;
 
   /**
    * Sorts the elements of a sequence in ascending order according to a key.
    * @param keySelector A function to extract a key from an element.
    */
-  orderByDescending(
-    keySelector: SlimExpressionFunction<T>
+  orderByDescending<O extends ExpressionResult>(
+    keySelector: Predicate<T, O>
   ): IQueryable<T, R, P>;
 }
 
@@ -189,6 +224,12 @@ export interface IDbSet<
   P = T,
   DT = DeepPartial<T> | T
 > extends IQueryable<T, R, P> {
+  /**
+   * Gets or sets the underlying type of the DbSet.
+   */
+  get [UnderlyingType](): new (...args: any[]) => T;
+  set [UnderlyingType](type: new (...args: any[]) => T);
+
   /**
    * Begins tracking the given entity, and any other reachable entities that are not
    * already being tracked, in the Added state such that they will be inserted
@@ -227,7 +268,7 @@ export interface IDbSet<
    * @param type The entity type
    * @param id The entity id
    */
-  find(id: any): Promise<T> | T;
+  find(id: any): Promise<T | undefined> | T | undefined;
 
   /**
    * Checks if an entity with the given id exists in the data store

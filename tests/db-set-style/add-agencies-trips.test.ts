@@ -1,7 +1,5 @@
-import { patch } from '../../src';
 import { FakeDBContext } from '../db-context';
 import { Agency } from '../entities/agency';
-import { Person } from '../entities/person';
 import { Trip } from '../entities/trip';
 
 describe('Add agencies and trips', () => {

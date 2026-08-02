@@ -1,4 +1,3 @@
-import { With } from '../../src';
 import { FakeDBContext } from '../db-context';
 import { Person } from '../entities/person';
 
@@ -6,9 +5,19 @@ describe('Remove person', () => {
   it('Should remove person', async () => {
     // Arrange
     const context = new FakeDBContext();
-    const personId = '015c5549-3bbb-31ef-b2d5-402c6a9f746e';
+    const newPerson = new Person();
+    newPerson.firstname = 'Buggy';
+    newPerson.lastname = 'Maker';
+    newPerson.IDNumber = 800;
+    newPerson.phone = '+237699977788';
 
     // Act
+    context.persons.add(newPerson);
+    await context.saveChanges();
+
+    // Act
+    const personId = newPerson.id;
+
     const person = await context.persons.find(personId);
     context.remove(person);
     await context.saveChanges();
@@ -17,6 +26,6 @@ describe('Remove person', () => {
     context.dispose();
 
     // Assert
-    expect(personIsThere).toBeUndefined();
+    expect(personIsThere).toBeNull();
   });
 });

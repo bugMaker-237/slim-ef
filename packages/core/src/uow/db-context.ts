@@ -1,38 +1,39 @@
-import { IDbConnectionAdapter, IDbRepository, IQueryRunner } from '../db-provider/interfaces';
-import { getEntitySchema, getEntitySet, getEntitySetKeys } from '../repository';
-import { DbSet, UnderlyingType } from '../repository/db-set';
-import { IDbSet } from '../repository/interfaces';
+import {
+  IDbConnectionAdapter,
+  IDbRepository,
+  IQueryRunner
+} from '../db-provider/interfaces';
+import { getEntitySchema } from '../repository';
 import { IInternalDbSet } from '../repository/_internal.interface';
+import { DbSet } from '../repository/db-set';
+import { IDbSet, UnderlyingType } from '../repository/interfaces';
 import {
   QuerySpecificationEvaluatorConstructor,
   QueryType
 } from '../specification/specification.interface';
 import {
-  ISavedTransaction,
+  IInternalDbContext,
+  ProxyMetaDataInstance
+} from './_internal.interface';
+import {
   IDbContext,
-  QueryInitializer,
-  IDbContextOptionsBuilder
+  IDbContextOptionsBuilder,
+  ISavedTransaction,
+  QueryInitializer
 } from './interfaces';
 import { getMetaData } from './metadata';
 import { DbContextModelBuilder } from './model-builder';
 import { DbContextOptionsBuilder } from './options-builder';
-import {
-  IInternalDbContext,
-  ProxyMetaDataInstance
-} from './_internal.interface';
-interface IEntity {
-  id?: any;
-}
 
 export abstract class DbContext implements IDbContext, IInternalDbContext {
   private _entitySets: WeakMap<any, IDbRepository<any>>;
-  private _new: IEntity[] = [];
-  private _dirty: IEntity[] = [];
-  private _deleted: IEntity[] = [];
-  private _queryRunner: IQueryRunner | null;
+  private _new: unknown[] = [];
+  private _dirty: unknown[] = [];
+  private _deleted: unknown[] = [];
+  private _queryRunner: IQueryRunner | null = null;
   private _modelBuilder: DbContextModelBuilder<any>;
   private _optionsBuilder: DbContextOptionsBuilder;
-  private _isUserTransaction: boolean;
+  private _isUserTransaction: boolean = false;
 
   constructor(
     protected _connection: IDbConnectionAdapter,
@@ -45,7 +46,6 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   }
 
   private _initialise() {
-    this._setUnderlyingEntityType();
     this.onModelCreation(this._modelBuilder);
     this.onConfiguring(this._optionsBuilder);
   }
@@ -64,35 +64,32 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     return dbSet as any;
   }
 
-  public add<T extends IEntity>(...entities: T[]) {
+  public add<T>(...entities: T[]) {
     this._new.push(...this._throwIfNullFound(entities, 'add'));
   }
 
-  public unTrack<T extends IEntity>(entity: T) {
+  public unTrack<T>(entity: T) {
     this._new = [...this._new.filter(n => n !== entity)];
     this._dirty = [...this._dirty.filter(n => n !== entity)];
     this._deleted = [...this._deleted.filter(n => n !== entity)];
   }
 
-  public update<T extends IEntity>(...entities: T[]) {
+  public update<T>(...entities: T[]) {
     this._dirty.push(...this._throwIfNullFound(entities, 'attach'));
   }
 
-  public remove<T extends IEntity>(...entities: T[]) {
+  public remove<T>(...entities: T[]) {
     this._deleted.push(...this._throwIfNullFound(entities, 'remove'));
   }
 
-  private _throwIfNullFound<T extends IEntity>(
-    entities: T[],
-    method: string
-  ): T[] {
+  private _throwIfNullFound<T>(entities: T[], method: string): T[] {
     if (entities.some(e => !e)) {
       throw new Error('Entities can not be null when call ' + method);
     }
     return entities;
   }
 
-  public async find<T extends IEntity>(type: any, id: any): Promise<T> {
+  public async find<T>(type: any, id: any): Promise<T | undefined> {
     await this._tryOpenConnection();
     const repo = this._getRepository(type);
     if (repo) {
@@ -127,17 +124,17 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
       const toUpdate = await this._commitDirty();
       const deleted = await this._commitDeleted();
 
-      if (!transIsOpened) await this._queryRunner.commitTransaction();
+      if (!transIsOpened) await this._queryRunner!.commitTransaction();
 
       const updated = withoutRefresh
         ? toUpdate
         : await this._getUpdates(toUpdate);
       return { added, updated, deleted };
     } catch (e) {
-      if (transIsOpened) await this._queryRunner.rollbackTransaction();
+      if (transIsOpened) await this._queryRunner!.rollbackTransaction();
       throw e;
     } finally {
-      if (!this._queryRunner.isReleased && !transIsOpened)
+      if (this._queryRunner && !this._queryRunner.isReleased && !transIsOpened)
         this._queryRunner.release();
       this._dispose();
     }
@@ -161,8 +158,8 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   public async commitTransaction(): Promise<void> {
     if (this.transactionIsOpen()) {
       await this._tryOpenConnection();
-      await this._queryRunner.commitTransaction();
-      await this._queryRunner.release();
+      await this._queryRunner!.commitTransaction();
+      await this._queryRunner!.release();
       this._queryRunner = null;
       this._isUserTransaction = false;
     }
@@ -170,8 +167,8 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
 
   public async rollbackTransaction(): Promise<void> {
     if (this.transactionIsOpen()) {
-      await this._queryRunner.rollbackTransaction();
-      await this._queryRunner.release();
+      await this._queryRunner!.rollbackTransaction();
+      await this._queryRunner!.release();
       this._queryRunner = null;
       this._isUserTransaction = false;
     }
@@ -184,7 +181,7 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     return result;
   }
 
-  public loadRelatedData<T extends IEntity>(
+  public loadRelatedData<T>(
     type: new (...args: []) => T,
     entity: T
   ): Promise<T> {
@@ -256,31 +253,31 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     this._deleted = [];
   }
 
-  private _setUnderlyingEntityType() {
-    const underType: string[] = getEntitySetKeys(this);
-    if (underType) {
-      for (const t of underType) {
-        const dbset = new DbSet<any, any>(this);
-        const entity = getEntitySet(this, t);
+  static __createDbSet(
+    instance: DbContext,
+    propertyName: string | symbol,
+    entity: new () => any
+  ): void {
+    const dbset = new DbSet<any, any>(instance);
 
-        if (dbset && entity) {
-          Object.defineProperty(this, t, {
-            configurable: false,
-            enumerable: false,
-            value: dbset,
-            writable: false
-          });
-          dbset[UnderlyingType] = entity;
-        }
-      }
+    if (dbset && entity) {
+      Object.defineProperty(instance, propertyName, {
+        configurable: false,
+        enumerable: false,
+        value: dbset,
+        writable: false
+      });
+      dbset[UnderlyingType] = entity;
     }
   }
 
-  private async _getUpdates(toUpdate: IEntity[]): Promise<IEntity[]> {
+  private async _getUpdates(toUpdate: unknown[]): Promise<unknown[]> {
     const updated = [];
     for (const n of toUpdate) {
-      const repo = this._getRepository<IEntity>(n);
-      updated.push(await repo.findOne(n.id));
+      const repo = this._getRepository<unknown>(n);
+      if (Object.prototype.hasOwnProperty.call(n, 'id')) {
+        updated.push(await repo.findOne((n as any)['id']));
+      }
     }
     return updated;
   }
@@ -288,29 +285,29 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
   private async _commitDeleted(): Promise<boolean[]> {
     const deleted = [];
     for (const n of this._deleted) {
-      const repo = this._getRepository<IEntity>(n);
+      const repo = this._getRepository<unknown>(n);
       deleted.push(await repo.delete(n));
     }
     return deleted;
   }
 
-  private async _commitDirty(): Promise<IEntity[]> {
+  private async _commitDirty(): Promise<unknown[]> {
     return await this._commitDirtyAll(this._dirty);
   }
 
-  private async _commitDirtyAll(dirty: IEntity[]): Promise<IEntity[]> {
+  private async _commitDirtyAll(dirty: unknown[]): Promise<unknown[]> {
     const updated = [];
     for (const n of dirty) {
-      const repo = this._getRepository<IEntity>(n);
+      const repo = this._getRepository<unknown>(n);
       updated.push(await repo.save(n));
     }
     return updated;
   }
 
-  private async _commitNew(): Promise<IEntity[]> {
+  private async _commitNew(): Promise<unknown[]> {
     const added = [];
     for (const n of this._new) {
-      const repo = this._getRepository<IEntity>(n);
+      const repo = this._getRepository<unknown>(n);
       added.push(await repo.save(n));
     }
     return added;
@@ -329,14 +326,16 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
     if (type instanceof DbSet) {
       type = type[UnderlyingType];
     }
+    if (this._entitySets.has(type)) return this._entitySets.get(type)!;
+
     const schema = getEntitySchema(type);
 
-    if (this._entitySets.has(type)) return this._entitySets.get(type);
     if (!schema)
       throw new Error(
         `Schema [${type?.constructor?.name}] not found. You may not have set EntityRepository decorator correctly`
       );
-    const repo = this._connection.getRepository<any>(schema);
+    const repo = this._connection.getRepository<T>(schema);
+
     this._entitySets.set(type, repo);
 
     return repo;
@@ -345,5 +344,6 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
 }
 
 // tslint:disable-next-line: max-classes-per-file
-export abstract class UnitOfWork extends DbContext
+export abstract class UnitOfWork
+  extends DbContext
   implements Omit<Omit<DbContext, 'execute'>, 'getMetadata'> {}

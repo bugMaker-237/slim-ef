@@ -1,0 +1,50 @@
+{
+  "name": "@slim-ef/core",
+  "version": "0.1.0",
+  "description": "An implementation of basic entity framework functionnalities in typescript",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bugMaker-237/slim-ef.git"
+  },
+  "keywords": [
+    "ef-core",
+    "linq",
+    "orm",
+    "expression",
+    "entity-framework",
+    "mongo",
+    "mongodb",
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "sqlite",
+    "sqlite3",
+    "ts",
+    "typescript",
+    "js",
+    "javascript",
+    "entity",
+    "ddd",
+    "slim-ef",
+    "unit-of-work",
+    "data-mapper",
+    "identity-map"
+  ],
+  "author": "bugmaker-237",
+  "license": "ISC",
+  "peerDependencies": {
+    "slim-exp": ">=0.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,11 +1,10 @@
-import { SlimExpressionFunction } from 'slim-exp';
-import { IQueryable, QueryRefiner } from '../repository';
+import { QueryRefiner } from '../repository';
 const GlobalMapKey = {
   name: Symbol('GlobalMapKey')
 };
 
 export class DbContextModelBuilder<I extends object = any> {
-  private _modelsFilterMap = new WeakMap<object, any[]>();
+  private _modelsFilterMap = new WeakMap<object, QueryRefiner<I>[]>();
   private _currentType: any = void 0;
   entity<T extends object>(type: new () => T): DbContextModelBuilder<T> {
     this._currentType = type;
@@ -13,9 +12,9 @@ export class DbContextModelBuilder<I extends object = any> {
   }
 
   hasQueryFilter(query: QueryRefiner<I>): DbContextModelBuilder<I> {
-    let expMap = [];
+    let expMap: QueryRefiner<I>[] = [];
     if (this._modelsFilterMap.has(this._currentType)) {
-      expMap = this._modelsFilterMap.get(this._currentType);
+      expMap = this._modelsFilterMap.get(this._currentType) || [];
     }
     expMap.push(query);
     this._modelsFilterMap.delete(this._currentType);
@@ -36,17 +35,17 @@ export class DbContextModelBuilder<I extends object = any> {
   }
 
   resetFilterFor<T>(type: new () => T): void {
-    this._modelsFilterMap.delete(this._currentType);
+    this._modelsFilterMap.delete(type);
     this._currentType = void 0;
   }
 
-  getFilters(type: any): SlimExpressionFunction<I>[] {
+  getFilters(type: any): QueryRefiner<I>[] {
     const filters = [];
     if (this._modelsFilterMap.has(type)) {
-      filters.push(...this._modelsFilterMap.get(type));
+      filters.push(...(this._modelsFilterMap.get(type) || []));
     }
     if (this._modelsFilterMap.has(GlobalMapKey)) {
-      filters.push(...this._modelsFilterMap.get(GlobalMapKey));
+      filters.push(...(this._modelsFilterMap.get(GlobalMapKey) || []));
     }
     return filters;
   }

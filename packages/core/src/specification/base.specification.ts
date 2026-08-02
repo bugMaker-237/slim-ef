@@ -1,13 +1,13 @@
 import {
-  ExpressionResult,
-  SlimExpression,
-  SlimExpressionFunction
+	ExpressionResult,
+	SlimExpression,
+	SlimExpressionFunction
 } from 'slim-exp';
 import {
-  ISpecification,
-  FieldsSelector,
-  CriteriaExpression,
-  FunctionQueryType
+	CriteriaExpression,
+	FieldsSelector,
+	FunctionQueryType,
+	ISpecification
 } from './specification.interface';
 
 export class BaseSpecification<T extends object> implements ISpecification<T> {
@@ -18,20 +18,20 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     chain: SlimExpressionFunction<any, any>[];
   }[] = [];
   private _criterias: CriteriaExpression<T>[] = [];
-  private _orderBy: SlimExpressionFunction<T>;
-  private _groupBy: SlimExpressionFunction<T, any, any>;
-  private _orderByDescending: SlimExpressionFunction<T>;
+  private _orderBy: SlimExpressionFunction<T> | null = null;
+  private _groupBy: SlimExpressionFunction<T, any, any> | null = null;
+  private _orderByDescending: SlimExpressionFunction<T> | null = null;
   private _thenOrderBy: SlimExpressionFunction<T>[] = [];
   private _thenGroupBy: SlimExpressionFunction<T, any, any>[] = [];
   private _take = 0;
   private _skip = 0;
-  private _isPagingEnabled: boolean;
-  private _selector: FieldsSelector<T>;
+  private _isPagingEnabled: boolean = false;
+  private _selector: FieldsSelector<T> | null = null;
   private _func: {
     type: FunctionQueryType;
     func: SlimExpressionFunction<T>;
-  };
-  private _initializeThenInclude: boolean;
+  } | null = null;
+  private _initializeThenInclude: boolean = false;
 
   getIncludePaths(): string[] {
     const paths = this._includes.map(i => SlimExpression.nameOf(i));
@@ -56,7 +56,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
     type: FunctionQueryType;
     func: SlimExpressionFunction<T>;
   } {
-    return this._func;
+    return this._func!;
   }
   getChainedIncludes(): {
     initial: SlimExpressionFunction<T>;
@@ -67,19 +67,19 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   getCriterias(): CriteriaExpression<T>[] {
     return this._criterias;
   }
-  getOrderBy(): SlimExpressionFunction<T> {
+  getOrderBy(): SlimExpressionFunction<T> | null {
     return this._orderBy;
   }
-  getGroupBy(): SlimExpressionFunction<T> {
+  getGroupBy(): SlimExpressionFunction<T, any, any> | null {
     return this._groupBy;
   }
-  getOrderByDescending(): SlimExpressionFunction<T> {
+  getOrderByDescending(): SlimExpressionFunction<T> | null {
     return this._orderByDescending;
   }
   getThenOrderBy(): SlimExpressionFunction<T>[] {
     return this._thenOrderBy;
   }
-  getThenGroupBy(): SlimExpressionFunction<T>[] {
+  getThenGroupBy(): SlimExpressionFunction<T, any, any>[] {
     return this._thenGroupBy;
   }
   getTake(): number {
@@ -91,7 +91,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   getIsPagingEnabled(): boolean {
     return this._isPagingEnabled;
   }
-  getSelector(): FieldsSelector<T> {
+  getSelector(): FieldsSelector<T> | null {
     return this._selector;
   }
 
@@ -113,18 +113,18 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   addChainedInclude<S extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S>
-  );
+  ): void;
   addChainedInclude<S extends object, R extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S, R>,
     include3: SlimExpressionFunction<R>
-  );
+  ): void;
   addChainedInclude<S extends object, R extends object, P extends object>(
     include: SlimExpressionFunction<T, S>,
     include2: SlimExpressionFunction<S, R>,
     include3: SlimExpressionFunction<R, P>,
     include4: SlimExpressionFunction<P>
-  );
+  ): void;
   addChainedInclude<
     S extends object,
     R extends object,
@@ -173,47 +173,48 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   }
 
   addCriteria<C extends object, S extends ExpressionResult>(
-    func: SlimExpressionFunction<T, S, C>,
+    func?: SlimExpressionFunction<T, S, C> | null,
     context?: C | null
   ) {
     if (func) this._criterias.push({ func, context });
   }
-  applySelector(selector: FieldsSelector<T>) {
+	
+  applySelector(selector: FieldsSelector<T> | null) {
     if (selector) this._selector = selector;
   }
-  applyOrderBy(orderBy: SlimExpressionFunction<T>) {
+  applyOrderBy(orderBy: SlimExpressionFunction<T> | null) {
     this._orderBy = orderBy;
     this._orderByDescending = null;
   }
-  applyGroupBy(groupBy: SlimExpressionFunction<T>) {
+  applyGroupBy(groupBy: SlimExpressionFunction<T> | null) {
     this._groupBy = groupBy;
   }
-  applyFunction(type: FunctionQueryType, func: SlimExpressionFunction<T>) {
-    if (type)
+  applyFunction(type: FunctionQueryType, func: SlimExpressionFunction<T> | null) {
+    if (type && func)
       this._func = {
         type,
         func
       };
   }
-  applyThenOrderBy(thenOrderBy: SlimExpressionFunction<T>) {
+  applyThenOrderBy(thenOrderBy: SlimExpressionFunction<T> | null) {
     if (thenOrderBy) {
       this._thenOrderBy.push(thenOrderBy);
     }
   }
-  applyThenGroupBy(thenBy: SlimExpressionFunction<T>) {
+  applyThenGroupBy(thenBy: SlimExpressionFunction<T> | null) {
     if (thenBy) {
       this._thenGroupBy.push(thenBy);
     }
   }
-  applyOrderByDescending(orderBy: SlimExpressionFunction<T>) {
+  applyOrderByDescending(orderBy: SlimExpressionFunction<T> | null) {
     this._orderByDescending = orderBy;
     this._orderBy = null;
   }
   extend(spec: ISpecification<T>) {
-    this._includes.concat(spec.getIncludes());
+    this._includes = this._includes.concat(spec.getIncludes());
     this._distinct = spec.getDistinct();
-    this._chainedIncludes.concat(spec.getChainedIncludes());
-    this._criterias.concat(spec.getCriterias());
+    this._chainedIncludes = this._chainedIncludes.concat(spec.getChainedIncludes());
+    this._criterias = this._criterias.concat(spec.getCriterias());
     this._skip = spec.getSkip();
     this._take = spec.getTake();
     this._isPagingEnabled = spec.getIsPagingEnabled();

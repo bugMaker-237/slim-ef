@@ -1,6 +1,4 @@
-import { With } from '../../src';
 import { FakeDBContext } from '../db-context';
-import { Person } from '../entities/person';
 
 describe('Add person', () => {
   it('Should update person :: style 1', async () => {

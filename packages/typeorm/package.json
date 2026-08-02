@@ -1,5 +1,5 @@
 {
-  "name": "slim-ef-typeorm",
+  "name": "@slim-ef/typeorm",
   "version": "0.1.0",
   "description": "TypeORM adapter for slim-ef: provides SQLQuerySpecificationEvaluator and related TypeORM integrations",
   "main": "lib/index.js",
@@ -24,8 +24,8 @@
   "author": "bugmaker-237",
   "license": "ISC",
   "peerDependencies": {
-    "slim-ef": ">=0.9.0",
-    "typeorm": ">=0.2.0"
+    "@slim-ef/core": ">=0.1.0",
+    "typeorm": ">=1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

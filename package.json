@@ -12,11 +12,11 @@
   ],
   "scripts": {
     "start:dev": "nodemon",
-    "build": "tsc",
-    "build:all": "npm run build && npm run build --workspace=packages/slim-ef-typeorm",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/typeorm",
+    "build:core": "npm run build --workspace=packages/core",
+    "build:typeorm": "npm run build --workspace=packages/typeorm",
     "format": "prettier --write \"src/**/*.(ts|js)\"",
     "lint": "eslint src --ext .ts",
-    "prepare": "npm run build",
     "prepublishOnly": "npm run lint && npm run test",
     "preversion": "npm run lint",
     "version": "npm run format && git tag v%npm_package_version%",
@@ -59,7 +59,7 @@
   "homepage": "https://github.com/bugMaker-237/slim-ef#readme",
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "@types/node": "^20.17.57",
+    "@types/node": "^20.19.43",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.1",
@@ -92,12 +92,12 @@
       "node"
     ],
     "moduleNameMapper": {
-      "^slim-ef-typeorm$": "<rootDir>/packages/slim-ef-typeorm/src/index.ts",
-      "^slim-ef$": "<rootDir>/src/index.ts"
+      "^@slim-ef/typeorm$": "<rootDir>/packages/typeorm/src/index.ts",
+      "^@slim-ef/core$": "<rootDir>/packages/core/src/index.ts"
     }
   },
   "dependencies": {
-    "slim-exp": "^0.3.2",
-    "typeorm": "^0.2.41"
+    "slim-exp": "^0.4.0",
+    "typeorm": "^1.1.0"
   }
 }

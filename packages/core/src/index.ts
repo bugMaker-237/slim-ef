@@ -1,38 +1,38 @@
 export {
   DbSet,
-  IDbSet,
   DbSetEntity,
-  QueryRefiner,
-  PrimitiveType,
-  IQueryable,
-  GenericRepository,
-  ExpressionResult,
   DeepPartial,
-  EntityRepository
+  EntityRepository,
+  ExpressionResult,
+  GenericRepository,
+  IDbSet,
+  IQueryable,
+  PrimitiveType,
+  QueryRefiner
 } from './repository';
 
 export {
   DbContext,
-  IDbContext,
-  ISavedTransaction,
   DbContextModelBuilder,
+  IDbContext,
   IDbContextOptionsBuilder,
   ILogger,
   ILoggerCategoryName,
   ILoggerFactory,
+  ISavedTransaction,
   IUnitOfWork,
-  UnitOfWork,
-  QueryInitializer
+  QueryInitializer,
+  UnitOfWork
 } from './uow';
 
 export {
   IDbConnectionAdapter,
   IDbRepository,
-  IQueryRunner,
-  IEntityMetadata,
   IEntityColumnMetadata,
+  IEntityManager,
+  IEntityMetadata,
   IEntityRelationMetadata,
-  IEntityManager
+  IQueryRunner
 } from './db-provider/interfaces';
 
 export * from './repository/utilis';

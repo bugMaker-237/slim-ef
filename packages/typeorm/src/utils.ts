@@ -1,6 +1,6 @@
 import { SlimExpression } from 'slim-exp';
-import { IQueryable, QueryRefiner } from 'slim-ef';
-import { ISpecification } from 'slim-ef';
+import { IQueryable, QueryRefiner } from '@slim-ef/core';
+import { ISpecification } from '@slim-ef/core';
 
 const nameof = SlimExpression.nameOf;
 

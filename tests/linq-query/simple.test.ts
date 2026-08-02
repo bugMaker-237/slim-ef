@@ -1,6 +1,4 @@
-import { patch } from '../../src';
 import { FakeDBContext } from '../db-context';
-import { Person } from '../entities/person';
 
 describe('Simple LINQ', () => {
   it('Should have at least 100 persons', async () => {

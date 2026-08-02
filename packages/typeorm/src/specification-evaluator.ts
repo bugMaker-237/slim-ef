@@ -1,60 +1,62 @@
 import {
-  ISpecification,
   CriteriaExpression,
-  IQuerySpecificationEvaluator,
-  QueryType,
+  FieldsSelector,
   FunctionQueryType,
-  FieldsSelector
-} from 'slim-ef';
+  IQuerySpecificationEvaluator,
+  ISpecification,
+  QueryType
+} from '@slim-ef/core';
 import {
-  SelectQueryBuilder,
-  ObjectLiteral,
   Brackets,
+  ObjectLiteral,
+  SelectQueryBuilder,
   WhereExpressionBuilder
 } from 'typeorm';
 import {
-  SQLConstants,
   ComparisonOperators,
   convertToSqlComparisonOperator,
-  SQLStringFunctions,
   format,
   SQLArrayFunctions,
-  SQLJoinFunctions
+  SQLConstants,
+  SQLJoinFunctions,
+  SQLStringFunctions
 } from './utils';
 
 import {
-  SlimExpression,
   ExpressionLeftHandSide,
+  ExpressionRightHandSide,
   ISlimExpression,
-  SlimExpressionFunction,
   PrimitiveValueTypes as PrimitiveTypes,
-  ExpressionRightHandSide
+  SlimExpression,
+  SlimExpressionFunction
 } from 'slim-exp';
 import { SQLQuerySpecificationException } from './exception';
 const INITIAL_ALIAS = 'entity';
-type WhereQuery<T> = (
-  where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string)
+type WhereQuery<T extends ObjectLiteral> = (
+  where: Brackets | string | ((qb: SelectQueryBuilder<T>) => string),
+  params?: Record<string, any>
 ) => SelectQueryBuilder<T>;
 
-type Sequence<T> = {
+type Sequence<T extends ObjectLiteral> = {
   toApply: WhereQuery<T>;
   queryStr: string;
   queryParams?: Record<string, any>;
 };
-type QuerySequence<T> = {
+type QuerySequence<T extends ObjectLiteral> = {
   firstSequence?: 'brackets' | 'topLevel';
   topLevelSequence: Sequence<T>[];
   bracketSequence?: QuerySequence<T>[];
   initialToApply: WhereQuery<T>;
 };
 
-export class SQLQuerySpecificationEvaluator<T extends object>
-  implements IQuerySpecificationEvaluator<T> {
+export class SQLQuerySpecificationEvaluator<
+  T extends ObjectLiteral
+> implements IQuerySpecificationEvaluator<T> {
   private registerdAliases = [INITIAL_ALIAS];
-  private _query: SelectQueryBuilder<T>;
-  private _queryReady: boolean;
+  private _query!: SelectQueryBuilder<T>;
+  private _queryReady: boolean = false;
   private _discriminator: number = 0;
-  private _selectBuilder: SlimExpressionFunction<T, any, any>;
+  private _selectBuilder?: SlimExpressionFunction<T, any, any>;
 
   constructor(
     private readonly initialQuery: (alias: string) => SelectQueryBuilder<T>,
@@ -82,11 +84,8 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       throw new SQLQuerySpecificationException(
         'You are trying to include self entity'
       );
-    const {
-      isAlreadyRegistered,
-      propertyName,
-      entityAlias
-    } = this._getFieldNameAndAlias(intialAlias, name);
+    const { isAlreadyRegistered, propertyName, entityAlias } =
+      this._getFieldNameAndAlias(intialAlias, name);
     if (!isAlreadyRegistered) toApply.call(query, propertyName, entityAlias);
     return { propertyName, entityAlias };
   }
@@ -161,7 +160,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     isFirst = false
   ): SelectQueryBuilder<T> {
     try {
-      const exp = new SlimExpression();
+      const exp = new SlimExpression<T>();
       exp.fromAction(selector.func, selector.context, false);
       exp.compile();
       const toApply = isFirst ? sqlQuery.where : sqlQuery.andWhere;
@@ -172,13 +171,13 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       });
       toApply.call(sqlQuery, brackets);
       return sqlQuery;
-    } catch (error) {
+    } catch (error: Error | any) {
       throw new SQLQuerySpecificationException(
         error?.message +
-        '; func:' +
-        selector.func.toString() +
-        '; context: ' +
-        selector.context
+          '; func:' +
+          selector.func.toString() +
+          '; context: ' +
+          selector.context
           ? JSON.stringify(selector.context)
           : ''
       );
@@ -204,7 +203,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       this._applyRecursively(sqlQuery, querySequence);
 
       return sqlQuery;
-    } catch (error) {
+    } catch (error: Error | any) {
       throw new SQLQuerySpecificationException(error.message);
     }
   }
@@ -215,17 +214,19 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     const first = querySequence;
 
     const callBrackets = () => {
-      for (const b of first.bracketSequence) {
-        const brackets = new Brackets(wh => {
-          this._applyRecursively(wh, b);
-        });
-        b.initialToApply.call(sqlQuery, brackets);
+      if (first.bracketSequence && first.bracketSequence.length > 0) {
+        for (const b of first.bracketSequence) {
+          const brackets = new Brackets(wh => {
+            this._applyRecursively(wh, b);
+          });
+          b.initialToApply.call(sqlQuery, brackets);
+        }
       }
     };
 
     const callTopLevel = () => {
       for (const s of first.topLevelSequence) {
-        s.toApply.call(sqlQuery, s.queryStr, s.queryParams);
+        s.toApply.call(sqlQuery, s.queryStr, s.queryParams || ({} as any));
       }
     };
 
@@ -257,7 +258,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       // associative, no matter the other be it exp1 && exp2 or exp2 && exp1 the
       // result is the same. So the real focus is to be able to handle the paranthesis
       // in a clean and oderable manner
-      if (e.brackets?.openingExp) {
+      if (e.brackets?.openingExp && querySequence.bracketSequence) {
         querySequence.bracketSequence.push(
           this._getQuerySequence(
             e.brackets.openingExp,
@@ -289,10 +290,14 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       if (!querySequence.firstSequence) {
         querySequence.firstSequence = 'topLevel';
       }
+
       querySequence.topLevelSequence.push(
         ...(sequence.topLevelSequence.filter(s => !!s.queryStr) || [])
       );
-      querySequence.bracketSequence.push(...(sequence.bracketSequence || []));
+
+      if (querySequence.bracketSequence && sequence.bracketSequence) {
+        querySequence.bracketSequence.push(...sequence.bracketSequence);
+      }
 
       if (e.next) {
         toApply = this._isOrBinding(e.next.bindedBy)
@@ -311,11 +316,11 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     operator: string,
     expObjectName: string,
     alias: string | ((implicitName: string) => string),
-    toApply?: WhereQuery<T>,
+    toApply: WhereQuery<T>,
     isInBracketGroup: boolean = false
   ): QuerySequence<T> {
     let queryStr = '';
-    let queryParams: ObjectLiteral;
+    let queryParams: any = undefined;
     if (!lhs && !rhs) {
       return {
         topLevelSequence: [{ toApply, queryStr, queryParams }],
@@ -323,9 +328,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       };
     }
 
-    const lhsProp = lhs.isMethod
-      ? lhs.propertyTree.slice(0, lhs.propertyTree.length - 1).join('.')
-      : lhs.propertyName;
+    const lhsProp =
+      lhs.isMethod && lhs.propertyTree
+        ? lhs.propertyTree.slice(0, lhs.propertyTree.length - 1).join('.')
+        : lhs.propertyName;
     const rhsProp = rhs?.propertyName;
 
     let lhsAlias: string;
@@ -334,10 +340,10 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     } else {
       lhsAlias = alias;
     }
-    let rhsAlias: string;
+    let rhsAlias: string | undefined;
     if (rhs) {
       if (typeof alias !== 'string') {
-        rhsAlias = alias(rhs.implicitContextName);
+        rhsAlias = alias(rhs.implicitContextName!);
       } else {
         rhsAlias = alias;
       }
@@ -378,14 +384,15 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         )} :${paramName}`;
         queryParams = {} as any;
 
+        const propValue = rhs.propertyValue as any;
         // we need to format the date because typeorm has issue handling it with
         // sqlite
         queryParams[paramName] =
           rhs.propertyType === PrimitiveTypes.date
-            ? this._polyfillDate(rhs.propertyValue)
+            ? this._polyfillDate(propValue)
             : rhs.propertyType === PrimitiveTypes.number
-            ? rhs.propertyValue.toString()
-            : rhs.propertyValue;
+              ? propValue.toString()
+              : propValue;
       } else {
         queryStr += ` ${
           lhs.isMethod ? '' : lhsName
@@ -416,21 +423,28 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     initialAlias: string,
     initialExpObjectName: string,
     leftHandSide: ExpressionLeftHandSide,
-    toApply?: WhereQuery<T>,
+    toApply: WhereQuery<T>,
     isInBracketGroup: boolean = false
   ): QuerySequence<T> {
     if (!leftHandSide.content)
       throw new Error('LeftHandSide Content not defined');
 
     let func: string;
-    let sqlPart: string;
+    let sqlPart: string = '';
     const propName = name;
     const content = leftHandSide.content;
+    const getStringFunction = (methodName: string) =>
+      (SQLStringFunctions as Record<string, string>)[methodName];
+    const getArrayFunction = (methodName: string) =>
+      (SQLArrayFunctions as Record<string, string>)[methodName];
+
     if (
       content.type in PrimitiveTypes &&
-      content.methodName in SQLStringFunctions
+      content.methodName &&
+      content.methodName in SQLStringFunctions &&
+      content.primitiveValue
     ) {
-      func = SQLStringFunctions[content.methodName];
+      func = getStringFunction(content.methodName);
       sqlPart = format(func, propName, content.primitiveValue.toString());
       return {
         topLevelSequence: [{ toApply, queryStr: sqlPart }],
@@ -438,10 +452,12 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       };
     } else if (
       !(content.type in PrimitiveTypes) &&
+      content.methodName &&
       content.methodName in SQLArrayFunctions &&
-      Array.isArray(content.primitiveValue)
+      Array.isArray(content.primitiveValue) &&
+      content.primitiveValue.length > 0
     ) {
-      func = SQLArrayFunctions[content.methodName];
+      func = getArrayFunction(content.methodName);
       const tb = content.primitiveValue.map(v => `'${v}'`);
       sqlPart = format(func, propName, tb.toString());
       return {
@@ -450,10 +466,11 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       };
     } else if (
       !(content.type in PrimitiveTypes) &&
+      content.methodName &&
       content.methodName in SQLJoinFunctions &&
       content.isExpression
     ) {
-      let LHS = leftHandSide;
+      let LHS: ExpressionLeftHandSide | undefined = leftHandSide;
       let alias = initialAlias;
       const contextNamesAndalias = new Map<string, string>();
       contextNamesAndalias.set(initialExpObjectName, initialAlias);
@@ -465,25 +482,25 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         //  LHS.propertyTree.slice(0, LHS.propertyTree.length - 1).join('.')
         const { entityAlias } = this._getFieldNameAndAlias(
           alias,
-          LHS.propertyTree.slice(0, LHS.propertyTree.length - 1).join('.'),
+          LHS.propertyTree!.slice(0, LHS.propertyTree!.length - 1).join('.'),
           true
         );
         alias = entityAlias;
-        const exp = LHS?.content?.expression;
+        const exp: ISlimExpression<any> | undefined = LHS?.content?.expression;
         if (exp) {
           contextNamesAndalias.set(exp.expObjectName, alias);
           if (exp.rightHandSide) {
             return this._getQuerySequence(
               exp,
-              o => contextNamesAndalias.get(o),
+              o => contextNamesAndalias.get(o)!,
               toApply,
-              null,
+              void 0,
               isInBracketGroup ? 'active' : 'inactive'
             );
           } else if (
             exp.leftHandSide &&
             exp.leftHandSide.isMethod &&
-            !exp.leftHandSide.content.isExpression
+            !exp.leftHandSide.content?.isExpression
           ) {
             const propTree = exp.leftHandSide.propertyName.split('.');
             propTree.pop();
@@ -641,7 +658,7 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         }
         this._queryReady = true;
         return res(this._query.getQuery());
-      } catch (error) {
+      } catch (error: Error | any) {
         throw new SQLQuerySpecificationException(error);
       }
     });
@@ -651,18 +668,22 @@ export class SQLQuerySpecificationEvaluator<T extends object>
     selector: FieldsSelector<T>
   ): string[] {
     const toSelect = [
-      ...selector.fieldsToSelect.map(f => this._getPropertyAlias(f.field))
+      ...(selector.fieldsToSelect || []).map(f =>
+        this._getPropertyAlias(f.field)
+      )
     ];
 
     // If id is not present typeorm throws an exception.
     // So we go get the id field
 
-    for (const c of this._query.expressionMap.mainAlias.metadata.columns) {
-      if (c.isPrimary) {
-        toSelect.push(
-          this._getFieldFromRegisteredAlias(INITIAL_ALIAS, c.propertyName)
-        );
-        break;
+    if (this._query.expressionMap.mainAlias) {
+      for (const c of this._query.expressionMap.mainAlias.metadata.columns) {
+        if (c.isPrimary) {
+          toSelect.push(
+            this._getFieldFromRegisteredAlias(INITIAL_ALIAS, c.propertyName)
+          );
+          break;
+        }
       }
     }
 
@@ -674,9 +695,11 @@ export class SQLQuerySpecificationEvaluator<T extends object>
       const propName = j.alias.name.split('_');
       propName.pop();
       const finalName = propName.join('_');
-      for (const f of j.relation.foreignKeys) {
-        for (const c of f.columnNames) {
-          toSelect.push(this._getFieldFromRegisteredAlias(finalName, c));
+      if (j.relation) {
+        for (const f of j.relation.foreignKeys) {
+          for (const c of f.columnNames) {
+            toSelect.push(this._getFieldFromRegisteredAlias(finalName, c));
+          }
         }
       }
     }
@@ -713,19 +736,17 @@ export class SQLQuerySpecificationEvaluator<T extends object>
         defaultVal = void 0;
         break;
       case QueryType.RAW_ALL:
+      default:
         toApply = this._query.getRawMany;
         defaultVal = [];
-        break;
-
-      default:
         break;
     }
     const result = (await toApply.call(this._query)) || defaultVal;
     let finalRes: any;
     if (this._selectBuilder) {
       finalRes = Array.isArray(result)
-        ? result.map(r => this._selectBuilder(r))
-        : this._selectBuilder(result);
+        ? result.map(r => this._selectBuilder!(r))
+        : this._selectBuilder(result as any);
     } else {
       finalRes = result;
     }
