@@ -5,8 +5,8 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
     ? DeepPartial<U>[]
     : T[P] extends ReadonlyArray<infer U2>
-    ? ReadonlyArray<DeepPartial<U2>>
-    : DeepPartial<T[P]> | T[P];
+      ? ReadonlyArray<DeepPartial<U2>>
+      : DeepPartial<T[P]> | T[P];
 };
 
 export interface IInternalDbSet<T extends object> extends IDbSet<T, T> {
