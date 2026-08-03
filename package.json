@@ -1,11 +1,14 @@
 {
-  "name": "slim-ef",
-  "version": "0.9.0",
+  "name": "@slim-ef",
+  "version": "0.1.0",
   "private": true,
   "description": "Monorepo root. Published packages live in packages/*. See @slim-ef/core and @slim-ef/typeorm.",
   "workspaces": [
     "packages/*"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start:dev": "nodemon",
     "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/typeorm",
