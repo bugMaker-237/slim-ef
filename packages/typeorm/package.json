@@ -1,6 +1,6 @@
 {
   "name": "@slim-ef/typeorm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeORM adapter for slim-ef: provides SQLQuerySpecificationEvaluator and related TypeORM integrations",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
