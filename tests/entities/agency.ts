@@ -1,21 +1,44 @@
-import { Column, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { EntitySchema } from 'typeorm';
 import { Trip } from './trip';
 
-@Entity()
 export class Agency {
-  @PrimaryGeneratedColumn()
-  id: number;
-  @Column()
-  name: string;
-
-  @Column()
-  phone: string;
-
-  @Column({
-    nullable: true
-  })
-  email: string;
-
-  @OneToMany(() => Trip, (p) => p.agency)
+  id!: number;
+  name!: string;
+  phone!: string;
+  email?: string;
+  isDistinct!: boolean;
   trips?: Trip[];
 }
+
+export const AgencySchema = new EntitySchema<Agency>({
+  name: 'Agency',
+  target: Agency,
+  columns: {
+    id: {
+      type: Number,
+      primary: true,
+      generated: true
+    },
+    name: {
+      type: String
+    },
+    phone: {
+      type: String
+    },
+    email: {
+      type: String,
+      nullable: true
+    },
+    isDistinct: {
+      type: Boolean,
+      default: false
+    }
+  },
+  relations: {
+    trips: {
+      type: 'one-to-many',
+      target: 'Trip',
+      inverseSide: 'agency'
+    }
+  }
+});

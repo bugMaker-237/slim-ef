@@ -105,3 +105,6 @@ dist
 
 lib
 database.sqlite
+# The test DB is a seed file that gets modified by write tests.
+# It is intentionally tracked at its original seed state.
+# Restore with: git checkout HEAD -- tests/seeder/slim_ef_test.db

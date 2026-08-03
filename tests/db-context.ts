@@ -1,19 +1,16 @@
-import { resolve } from 'path';
-import { Connection } from 'typeorm';
-import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
-import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 import {
   DbContext,
-  DbSet,
+  DbContextModelBuilder,
   DbSetEntity,
-  IDbSet,
-  SQLQuerySpecificationEvaluator
-} from '../lib';
-import { IDbContextOptionsBuilder } from '../lib/uow/interfaces';
-import { DbContextModelBuilder } from '../lib/uow/model-builder';
-import { Agency } from './entities/agency';
-import { Person } from './entities/person';
-import { Trip } from './entities/trip';
+  IDbContextOptionsBuilder,
+  IDbSet
+} from '@slim-ef/core';
+import { TypeOrmConnectionAdapter } from '@slim-ef/typeorm';
+import { SQLQuerySpecificationEvaluator } from '@slim-ef/typeorm';
+import { resolve } from 'path';
+import { Agency, AgencySchema } from './entities/agency';
+import { Person, PersonSchema } from './entities/person';
+import { Trip, TripSchema } from './entities/trip';
 
 export class FakeDBContext extends DbContext {
   constructor() {
@@ -21,31 +18,14 @@ export class FakeDBContext extends DbContext {
      * SQLite connection
      */
     super(
-      new Connection({
-        type: 'sqlite',
+      new TypeOrmConnectionAdapter({
+        type: 'better-sqlite3',
         database: resolve(__dirname, 'seeder', 'slim_ef_test.db'),
-        entities: [Person, Agency, Trip],
+        entities: [PersonSchema, AgencySchema, TripSchema],
         synchronize: false
-      } as SqliteConnectionOptions),
+      }),
       SQLQuerySpecificationEvaluator
     );
-    /**
-     * MySql Connection
-     */
-    // super(
-    //   new Connection({
-    //     type: 'mysql',
-    //     host: 'localhost',
-    //     port: 3306,
-    //     username: 'admin',
-    //     password: 'admin0000',
-    //     database: 'slim_ef_test',
-    //     entities: [Person, Agency, Trip],
-    //     synchronize: true
-    //   } as MysqlConnectionOptions),
-    //   SQLQuerySpecificationEvaluator
-    // );
-    return void 0;
   }
 
   protected onModelCreation<BaseType extends object = any>(
@@ -63,11 +43,11 @@ export class FakeDBContext extends DbContext {
   }
 
   @DbSetEntity(Person)
-  public readonly persons: IDbSet<Person, Person>;
+  public readonly persons!: IDbSet<Person, Person>;
 
   @DbSetEntity(Agency)
-  public readonly agencies: IDbSet<Agency, Agency>;
+  public readonly agencies!: IDbSet<Agency, Agency>;
 
   @DbSetEntity(Trip)
-  public readonly trips: IDbSet<Trip, Trip>;
+  public readonly trips!: IDbSet<Trip, Trip>;
 }

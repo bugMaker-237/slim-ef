@@ -18,7 +18,7 @@ describe('Select test', () => {
       .thenInclude(t => t.agency)
       .select(p => ({
         att1: p.trip.departureDate,
-        att2: p.trip.agency.name
+        att2: p.trip.agency!.name
       }))
       .firstOrDefault(p => p.id === 'd1fa69b0-2092-3b6f-90d5-870e902c8315');
 
@@ -37,7 +37,7 @@ describe('Select test', () => {
         t =>
           new TripResponse(
             t.agency.name,
-            t.agency.email,
+            t.agency.email!,
             t.departureDate,
             t.passengers.map(p => ({
               name: p.lastname,
@@ -66,7 +66,7 @@ describe('Select test', () => {
       .where(
         (t, $) =>
           t.departureDate > $.departureDate &&
-          (t.estimatedArrivalDate < $.estimatedArrivalDate ||
+          (t.estimatedArrivalDate! < $.estimatedArrivalDate ||
             t.passengers.some(p => p.willTravel === true)),
         ctx
       )
@@ -74,7 +74,7 @@ describe('Select test', () => {
         t =>
           new TripResponse(
             t.agency.name,
-            t.agency.email,
+            t.agency.email!,
             t.departureDate,
             t.passengers.map(p => ({
               name: p.lastname,
@@ -102,7 +102,7 @@ describe('Select test', () => {
       .include(t => t.passengers)
       .where(
         (t, $) =>
-          (t.estimatedArrivalDate < $.estimatedArrivalDate ||
+          (t.estimatedArrivalDate! < $.estimatedArrivalDate ||
             t.passengers.some(p => p.willTravel === true)) &&
           t.departureDate > $.departureDate,
         ctx
@@ -111,7 +111,7 @@ describe('Select test', () => {
         t =>
           new TripResponse(
             t.agency.name,
-            t.agency.email,
+            t.agency.email!,
             t.departureDate,
             t.passengers.map(p => ({
               name: p.lastname,

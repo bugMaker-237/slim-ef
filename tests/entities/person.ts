@@ -1,44 +1,57 @@
-import {
-  Column,
-  Entity,
-  ManyToOne,
-  PrimaryColumn,
-  PrimaryGeneratedColumn
-} from 'typeorm';
+import { EntitySchema } from 'typeorm';
 import { Trip } from './trip';
 
-@Entity()
 export class Person {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @ManyToOne(() => Trip, c => c.passengers)
-  trip?: Trip;
-
-  @Column({
-    nullable: true
-  })
+  id!: string;
+  trip!: Trip;
   tripId?: string;
-
-  @Column()
-  firstname: string;
-
-  @Column()
-  lastname: string;
-
-  @Column()
-  phone: string;
-
-  @Column()
-  IDNumber: number;
-
-  @Column({
-    nullable: true
-  })
-  email: string;
-
-  @Column({
-    default: false
-  })
-  willTravel: boolean;
+  firstname!: string;
+  lastname!: string;
+  phone!: string;
+  IDNumber!: number;
+  email?: string;
+  willTravel!: boolean;
 }
+
+export const PersonSchema = new EntitySchema<Person>({
+  name: 'Person',
+  target: Person,
+  columns: {
+    id: {
+      type: String,
+      primary: true,
+      generated: 'uuid'
+    },
+    tripId: {
+      type: String,
+      nullable: true
+    },
+    firstname: {
+      type: String
+    },
+    lastname: {
+      type: String
+    },
+    phone: {
+      type: String
+    },
+    IDNumber: {
+      type: Number
+    },
+    email: {
+      type: String,
+      nullable: true
+    },
+    willTravel: {
+      type: Boolean,
+      default: false
+    }
+  },
+  relations: {
+    trip: {
+      type: 'many-to-one',
+      target: 'Trip',
+      inverseSide: 'passengers'
+    }
+  }
+});

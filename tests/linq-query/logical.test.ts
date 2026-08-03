@@ -29,7 +29,7 @@ describe('Logical LINQ', () => {
       .where(
         (t, $) =>
           t.departureDate > $.departureDate &&
-          t.estimatedArrivalDate < $.estimatedArrivalDate,
+          t.estimatedArrivalDate! < $.estimatedArrivalDate,
         data
       )
       .toList();
@@ -40,7 +40,7 @@ describe('Logical LINQ', () => {
     expect(trips.length).toEqual(32);
     expect(trips.some(t => t.departureDate < data.departureDate)).toBeFalsy();
     expect(
-      trips.some(t => t.estimatedArrivalDate > data.estimatedArrivalDate)
+      trips.some(t => t.estimatedArrivalDate! > data.estimatedArrivalDate)
     ).toBeFalsy();
   });
 
@@ -54,7 +54,7 @@ describe('Logical LINQ', () => {
     const agencies = await context.agencies
       .where(
         (a, _) =>
-          a.email.endsWith(_.name) || (a.name.includes(_.name) && a.id > 45),
+          a.email!.endsWith(_.name) || (a.name.includes(_.name) && a.id > 45),
         $
       )
       .toList();
@@ -64,7 +64,7 @@ describe('Logical LINQ', () => {
     // Assert
     expect(agencies.length).toEqual(8);
     expect(
-      agencies.some(t => !t.email.endsWith($.name) && !t.name.includes($.name))
+      agencies.some(t => !t.email!.endsWith($.name) && !t.name.includes($.name))
     ).toBeFalsy();
   });
 
@@ -82,8 +82,8 @@ describe('Logical LINQ', () => {
       .where(
         (t, $) =>
           t.departureDate > $.departureDate &&
-          (t.estimatedArrivalDate < $.estimatedArrivalDate ||
-            t.passengers.some(p => p.willTravel === true)),
+          (t.estimatedArrivalDate! < $.estimatedArrivalDate ||
+            t.passengers!.some(p => p.willTravel === true)),
         data
       )
       .toList();

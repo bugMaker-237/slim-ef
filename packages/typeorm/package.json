@@ -1,0 +1,52 @@
+{
+  "name": "@slim-ef/typeorm",
+  "version": "0.1.0",
+  "description": "TypeORM adapter for slim-ef: provides SQLQuerySpecificationEvaluator and related TypeORM integrations",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bugMaker-237/slim-ef.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bugMaker-237/slim-ef/issues"
+  },
+  "homepage": "https://github.com/bugMaker-237/slim-ef#readme",
+  "keywords": [
+    "slim-ef",
+    "typeorm",
+    "orm",
+    "typescript",
+    "linq",
+    "entity-framework"
+  ],
+  "author": "bugmaker-237",
+  "license": "ISC",
+  "dependencies": {
+    "slim-exp": ">=0.4.0"
+  },
+  "peerDependencies": {
+    "@slim-ef/core": ">=0.1.0",
+    "typeorm": ">=1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
