@@ -178,7 +178,6 @@ export class DbSet<
         return true;
       })
       .catch(rej => {
-        console.log('select error', rej);
         if (
           rej.message &&
           rej.message.includes('Cannot read property') &&
@@ -257,7 +256,7 @@ export class DbSet<
       predicate as SlimExpressionFunction<T, any, C>,
       context
     );
-    this._baseSpec.applyFunction('COUNT', null);
+    this._baseSpec.applyFunction('COUNT');
     return Number.parseFloat(
       (await this.execute<{ COUNT: string }>(QueryType.RAW_ONE)).COUNT
     );

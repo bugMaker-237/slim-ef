@@ -30,8 +30,12 @@ export class TypeOrmConnectionAdapter implements IDbConnectionAdapter {
   createQueryRunner(): IQueryRunner {
     const queryRunner = this._dataSource.createQueryRunner();
     return {
-      isReleased: queryRunner.isReleased,
-      isTransactionActive: queryRunner.isTransactionActive,
+      get isReleased() {
+        return queryRunner.isReleased;
+      },
+      get isTransactionActive() {
+        return queryRunner.isTransactionActive;
+      },
       startTransaction: () => queryRunner.startTransaction(),
       commitTransaction: () => queryRunner.commitTransaction(),
       rollbackTransaction: () => queryRunner.rollbackTransaction(),
@@ -46,7 +50,10 @@ export class TypeOrmConnectionAdapter implements IDbConnectionAdapter {
         repository.findOne({
           where: { id }
         }),
-      save: (entity: T) => repository.save(entity),
+      save: async (entity: T) => {
+        const res = await repository.save(entity);
+        return res;
+      },
       delete: async (entity: any) =>
         !!(await repository.delete({
           id: entity.id
@@ -70,7 +77,7 @@ export class TypeOrmConnectionAdapter implements IDbConnectionAdapter {
       })),
       relations: metadata.relations.map(rel => ({
         propertyName: rel.propertyName,
-        type: rel.target as Function,
+        type: (rel.inverseEntityMetadata?.target ?? rel.type) as Function,
         isOneToMany: rel.isOneToMany
       }))
     };

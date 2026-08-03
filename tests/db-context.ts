@@ -5,10 +5,8 @@ import {
   IDbContextOptionsBuilder,
   IDbSet
 } from '@slim-ef/core';
-import {
-  SQLQuerySpecificationEvaluator,
-  TypeOrmConnectionAdapter
-} from '@slim-ef/typeorm';
+import { TypeOrmConnectionAdapter } from '@slim-ef/typeorm';
+import { SQLQuerySpecificationEvaluator } from '@slim-ef/typeorm';
 import { resolve } from 'path';
 import { Agency, AgencySchema } from './entities/agency';
 import { Person, PersonSchema } from './entities/person';

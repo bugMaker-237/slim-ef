@@ -101,10 +101,12 @@ export abstract class DbContext implements IDbContext, IInternalDbContext {
 
   public rollback(entityType: any = null): void {
     if (entityType !== null) {
-      const type = typeof entityType;
-      this._new = [...this._new.filter(n => typeof n !== type)];
-      this._dirty = [...this._dirty.filter(n => typeof n === type)];
-      this._deleted = [...this._deleted.filter(n => typeof n === type)];
+      const isSameType = (n: any) =>
+        (typeof entityType === 'function' && n instanceof entityType) ||
+        n.constructor === entityType;
+      this._new = this._new.filter(n => !isSameType(n));
+      this._dirty = this._dirty.filter(n => !isSameType(n));
+      this._deleted = this._deleted.filter(n => !isSameType(n));
     } else {
       this._dispose();
     }

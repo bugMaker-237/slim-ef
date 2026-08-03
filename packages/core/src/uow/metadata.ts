@@ -48,7 +48,7 @@ function _getTypeMetaData<T = any>(
   basePropName = '',
   includePaths: string[] = []
 ): ProxyMetaDataInstance<T> {
-  const index = constructorChain.find(o => o.constructor === type);
+  const index = constructorChain.findIndex(o => o.constructor === type);
   if (index >= 0) {
     const proxy = constructorChain[index];
     return proxy;

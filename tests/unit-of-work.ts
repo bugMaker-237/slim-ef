@@ -8,9 +8,9 @@ import {
   TypeOrmConnectionAdapter
 } from '@slim-ef/typeorm';
 import { resolve } from 'path';
-import { Agency } from './entities/agency';
-import { Person } from './entities/person';
-import { Trip } from './entities/trip';
+import { AgencySchema } from './entities/agency';
+import { Person, PersonSchema } from './entities/person';
+import { TripSchema } from './entities/trip';
 
 export class FakeUnitOfWork extends UnitOfWork {
   constructor() {
@@ -21,7 +21,7 @@ export class FakeUnitOfWork extends UnitOfWork {
       new TypeOrmConnectionAdapter({
         type: 'better-sqlite3',
         database: resolve(__dirname, 'seeder', 'slim_ef_test.db'),
-        entities: [Person, Agency, Trip],
+        entities: [PersonSchema, AgencySchema, TripSchema],
         synchronize: false
       }),
       SQLQuerySpecificationEvaluator

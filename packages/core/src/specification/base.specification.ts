@@ -1,13 +1,13 @@
 import {
-	ExpressionResult,
-	SlimExpression,
-	SlimExpressionFunction
+  ExpressionResult,
+  SlimExpression,
+  SlimExpressionFunction
 } from 'slim-exp';
 import {
-	CriteriaExpression,
-	FieldsSelector,
-	FunctionQueryType,
-	ISpecification
+  CriteriaExpression,
+  FieldsSelector,
+  FunctionQueryType,
+  ISpecification
 } from './specification.interface';
 
 export class BaseSpecification<T extends object> implements ISpecification<T> {
@@ -29,7 +29,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   private _selector: FieldsSelector<T> | null = null;
   private _func: {
     type: FunctionQueryType;
-    func: SlimExpressionFunction<T>;
+    func?: SlimExpressionFunction<T>;
   } | null = null;
   private _initializeThenInclude: boolean = false;
 
@@ -54,7 +54,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   }
   getFunction(): {
     type: FunctionQueryType;
-    func: SlimExpressionFunction<T>;
+    func?: SlimExpressionFunction<T>;
   } {
     return this._func!;
   }
@@ -178,7 +178,7 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   ) {
     if (func) this._criterias.push({ func, context });
   }
-	
+
   applySelector(selector: FieldsSelector<T> | null) {
     if (selector) this._selector = selector;
   }
@@ -189,8 +189,8 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   applyGroupBy(groupBy: SlimExpressionFunction<T> | null) {
     this._groupBy = groupBy;
   }
-  applyFunction(type: FunctionQueryType, func: SlimExpressionFunction<T> | null) {
-    if (type && func)
+  applyFunction(type: FunctionQueryType, func?: SlimExpressionFunction<T>) {
+    if (type)
       this._func = {
         type,
         func
@@ -213,7 +213,9 @@ export class BaseSpecification<T extends object> implements ISpecification<T> {
   extend(spec: ISpecification<T>) {
     this._includes = this._includes.concat(spec.getIncludes());
     this._distinct = spec.getDistinct();
-    this._chainedIncludes = this._chainedIncludes.concat(spec.getChainedIncludes());
+    this._chainedIncludes = this._chainedIncludes.concat(
+      spec.getChainedIncludes()
+    );
     this._criterias = this._criterias.concat(spec.getCriterias());
     this._skip = spec.getSkip();
     this._take = spec.getTake();
